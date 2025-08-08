@@ -75,7 +75,7 @@ def get_cached_gemini_llm(api_key: str, temperature: float = 0) -> ChatGoogleGen
     """Cached LLM instances to avoid repeated initialization"""
     return ChatGoogleGenerativeAI(
         google_api_key=api_key,
-        model="gemini-1.5-flash",
+        model="gemini-2.0-flash",
         temperature=temperature,
         convert_system_message_to_human=True
     )
