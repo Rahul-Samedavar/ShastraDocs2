@@ -31,4 +31,7 @@ pillow
 langchain-groq
 langchain-openai
 langchain
+langchain-google-genai
 google-generativeai
+bs4
+aiodns

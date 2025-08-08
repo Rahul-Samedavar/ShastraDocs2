@@ -42,7 +42,7 @@ class FileDownloader:
 
                         ext = os.path.splitext(filename)[1]
                         if not ext:
-                            ext = ".bin"  # Fallback if no extension is found
+                            return url, "url"
 
                         print(f"   📁 Detected filename: {filename}, extension: {ext}")
 

@@ -26,15 +26,6 @@ fi
 
 echo "✅ Database directories ready"
 
-# Check if hard/hard.json exists
-if [ -f "hard/hard.json" ]; then
-    echo "✅ hard/hard.json file found for predefined answers"
-    # Count the number of document sets
-    sets_count=$(python -c "import json; data=json.load(open('hard/hard.json')); print(len(data.get('prefefined_answers', [])))" 2>/dev/null || echo "0")
-    echo "📊 Loaded $sets_count predefined answer sets"
-else
-    echo "❌ hard/hard.json file not found - predefined answers will not work"
-fi
 
 # Start the application
 echo "🚀 Starting RAG API..."

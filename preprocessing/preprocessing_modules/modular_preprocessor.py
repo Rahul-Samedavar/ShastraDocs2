@@ -125,6 +125,10 @@ class ModularDocumentPreprocessor:
                     full_text = extract_pptx(temp_file_path)
                     return [full_text, 'oneshot']
                 
+                case 'url':
+                    new_context = "URL Found: " + full_text
+                    return [new_context, 'oneshot']
+                
                 case 'txt':
                     with open (temp_file_path, 'r') as f:
                         full_text = f.read()
