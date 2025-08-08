@@ -1,23 +1,20 @@
-# Ultra-Fast Enhanced QA System with Optimized Parallel Processing
+# FastAPI-Compatible Enhanced QA System
 import re
 import time
-import requests
+import asyncio
+import httpx
 from typing import List, Dict, Tuple, Optional
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from pydantic import BaseModel, Field
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import ChatPromptTemplate
-import threading
-from datetime import datetime, timedelta
+from datetime import datetime
 import random
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import asyncio
-from functools import partial, lru_cache
-import aiohttp
-import aiodns
+from functools import lru_cache
 from dataclasses import dataclass
 import json
+import threading
 
 import os
 from dotenv import load_dotenv
@@ -29,29 +26,27 @@ API_KEYS = [
     os.getenv("GEMINI_API_KEY_3")
 ]
 
-# Optimized API Key Management with Connection Pooling
-class OptimizedAPIKeyManager:
+# Thread-safe API Key Manager
+class FastAPICompatibleKeyManager:
     def __init__(self, api_keys: List[str], requests_per_minute: int = 15):
-        """Enhanced API key manager with faster rotation logic"""
-        self.api_keys = [key for key in api_keys if key]  # Filter None keys
+        self.api_keys = [key for key in api_keys if key]
         self.requests_per_minute = requests_per_minute
         self.key_usage = {key: 0 for key in self.api_keys}
         self.last_reset = {key: datetime.now() for key in self.api_keys}
         self.current_index = 0
-        self.lock = threading.RLock()  # Reentrant lock for better performance
+        self.lock = threading.RLock()
     
     def get_available_key(self) -> str:
-        """Fast key rotation with minimal locking"""
         current_time = datetime.now()
         
         with self.lock:
-            # Fast reset check - only reset counters older than 1 minute
+            # Reset counters for keys older than 1 minute
             for key in self.api_keys:
                 if (current_time - self.last_reset[key]).total_seconds() >= 60:
                     self.key_usage[key] = 0
                     self.last_reset[key] = current_time
             
-            # Quick available key search
+            # Find available key
             for i in range(len(self.api_keys)):
                 idx = (self.current_index + i) % len(self.api_keys)
                 key = self.api_keys[idx]
@@ -61,18 +56,14 @@ class OptimizedAPIKeyManager:
                     self.current_index = (idx + 1) % len(self.api_keys)
                     return key
             
-            # If all keys are at limit, use oldest one and add minimal delay
+            # If all keys at limit, return oldest (with small delay)
             oldest_key = min(self.api_keys, key=lambda k: self.last_reset[k])
-            time.sleep(0.1)  # Minimal delay instead of full minute wait
             return oldest_key
 
-# Global optimized manager
-api_key_manager = OptimizedAPIKeyManager(API_KEYS)
+api_key_manager = FastAPICompatibleKeyManager(API_KEYS)
 
-# Cached LLM instances for reuse
 @lru_cache(maxsize=5)
 def get_cached_gemini_llm(api_key: str, temperature: float = 0) -> ChatGoogleGenerativeAI:
-    """Cached LLM instances to avoid repeated initialization"""
     return ChatGoogleGenerativeAI(
         google_api_key=api_key,
         model="gemini-2.0-flash",
@@ -81,11 +72,10 @@ def get_cached_gemini_llm(api_key: str, temperature: float = 0) -> ChatGoogleGen
     )
 
 def get_gemini_llm(temperature: float = 0) -> ChatGoogleGenerativeAI:
-    """Get optimized Gemini LLM instance"""
     api_key = api_key_manager.get_available_key()
     return get_cached_gemini_llm(api_key, temperature)
 
-# Define optimized output schemas
+# Define schemas
 class QA(BaseModel):
     answer: str = Field(description="Detailed answer based on context")
 
@@ -105,471 +95,460 @@ class SearchNeedAssessment(BaseModel):
 class FinalAnswer(BaseModel):
     answers: List[str] = Field(description="Final answers to all questions")
 
-# Optimized URL extraction with compiled regex
+# Optimized URL extraction
 URL_PATTERN = re.compile(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
 
 def extract_urls_from_text(text: str) -> List[str]:
-    """Optimized URL extraction with compiled regex"""
     urls = URL_PATTERN.findall(text)
-    return list(dict.fromkeys(url.rstrip('.,;:!?)') for url in urls if url))
+    seen = set()
+    clean_urls = []
+    for url in urls:
+        clean_url = url.rstrip('.,;:!?)')
+        if clean_url and clean_url not in seen and validate_url(clean_url):
+            seen.add(clean_url)
+            clean_urls.append(clean_url)
+    return clean_urls
 
 @lru_cache(maxsize=100)
 def validate_url(url: str) -> bool:
-    """Cached URL validation"""
     try:
         result = urlparse(url)
         return bool(result.scheme and result.netloc)
     except:
         return False
 
-# Async web scraping for maximum speed
-async def async_scrape_url(session: aiohttp.ClientSession, url: str, max_chars: int = 2500) -> Dict[str, str]:
-    """Async URL scraping for maximum performance"""
+# FastAPI-compatible async scraping
+async def scrape_url_fastapi_compatible(url: str, max_chars: int = 3000) -> Dict[str, str]:
+    """FastAPI-compatible URL scraping"""
     try:
-        timeout = aiohttp.ClientTimeout(total=5)  # Aggressive timeout
-        async with session.get(url, timeout=timeout) as response:
-            if response.status != 200:
-                return {'url': url, 'content': f"HTTP {response.status}", 'status': 'error', 'length': 0}
-            
-            html = await response.text()
-            
-            # Fast BeautifulSoup parsing with minimal features
-            soup = BeautifulSoup(html, 'html.parser')
-            
-            # Remove unwanted elements efficiently
-            for tag in soup(['script', 'style', 'nav', 'footer', 'header', 'aside']):
-                tag.decompose()
-            
-            # Get text with aggressive cleanup
-            text = ' '.join(soup.stripped_strings)
-            
-            # Truncate early to save memory
-            if len(text) > max_chars:
-                text = text[:max_chars] + "..."
-            
-            return {
-                'url': url,
-                'content': text,
-                'status': 'success',
-                'length': len(text)
-            }
-            
-    except Exception as e:
-        return {
-            'url': url,
-            'content': f"Error: {str(e)[:100]}",
-            'status': 'error', 
-            'length': 0
+        timeout = httpx.Timeout(15.0)
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
-
-async def scrape_urls_async(urls: List[str], max_chars: int = 2500) -> List[Dict[str, str]]:
-    """Ultra-fast async URL scraping"""
-    if not urls:
-        return []
-    
-    print(f"🚀 Async scraping {len(urls)} URLs...")
-    
-    # Optimized connector with connection pooling
-    connector = aiohttp.TCPConnector(
-        limit=20,  # Connection pool size
-        limit_per_host=5,
-        ttl_dns_cache=300,
-        use_dns_cache=True
-    )
-    
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    }
-    
-    async with aiohttp.ClientSession(
-        connector=connector,
-        headers=headers,
-        timeout=aiohttp.ClientTimeout(total=5)
-    ) as session:
-        tasks = [async_scrape_url(session, url, max_chars) for url in urls]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
         
-        # Handle exceptions in results
-        processed_results = []
-        for i, result in enumerate(results):
-            if isinstance(result, Exception):
-                processed_results.append({
-                    'url': urls[i],
-                    'content': f"Exception: {str(result)[:100]}",
-                    'status': 'exception',
-                    'length': 0
-                })
-            else:
-                processed_results.append(result)
-    
-    successful = sum(1 for r in processed_results if r['status'] == 'success')
-    print(f"✅ Async scraping complete: {successful}/{len(urls)} successful")
-    return processed_results
-
-def scrape_urls_parallel(urls: List[str], max_chars: int = 2500, **kwargs) -> List[Dict[str, str]]:
-    """Wrapper to run async scraping in thread"""
-    if not urls:
-        return []
-    
-    try:
-        # Try to use existing event loop
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # If loop is running, use thread executor
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(asyncio.run, scrape_urls_async(urls, max_chars))
-                return future.result(timeout=30)
-        else:
-            return asyncio.run(scrape_urls_async(urls, max_chars))
-    except:
-        # Fallback to sync scraping if async fails
-        return scrape_urls_sync_fallback(urls, max_chars)
-
-def scrape_urls_sync_fallback(urls: List[str], max_chars: int = 2500) -> List[Dict[str, str]]:
-    """Sync fallback scraping"""
-    print(f"⚡ Fallback sync scraping {len(urls)} URLs...")
-    
-    def scrape_single(url):
-        try:
-            response = requests.get(
-                url, 
-                timeout=5, 
-                headers={'User-Agent': 'Mozilla/5.0 (compatible)'}
-            )
+        async with httpx.AsyncClient(timeout=timeout, headers=headers, follow_redirects=True) as client:
+            response = await client.get(url)
             response.raise_for_status()
             
+            # Parse with BeautifulSoup
             soup = BeautifulSoup(response.content, 'html.parser')
-            for tag in soup(['script', 'style', 'nav', 'footer']):
+            
+            # Remove unwanted elements
+            for tag in soup(['script', 'style', 'nav', 'footer', 'header', 'aside', 'advertisement']):
                 tag.decompose()
             
-            text = ' '.join(soup.stripped_strings)[:max_chars]
+            # Extract clean text
+            text_content = soup.get_text(separator=' ', strip=True)
+            
+            # Clean and truncate
+            cleaned_text = ' '.join(text_content.split())
+            if len(cleaned_text) > max_chars:
+                cleaned_text = cleaned_text[:max_chars] + "..."
             
             return {
                 'url': url,
-                'content': text,
+                'content': cleaned_text,
                 'status': 'success',
-                'length': len(text)
+                'length': len(cleaned_text),
+                'title': soup.title.string if soup.title else 'No title'
             }
-        except Exception as e:
-            return {
-                'url': url,
-                'content': f"Error: {str(e)[:50]}",
-                'status': 'error',
-                'length': 0
-            }
-    
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        results = list(executor.map(scrape_single, urls))
-    
-    return results
+            
+    except httpx.TimeoutException:
+        print(f"⏰ Timeout scraping {url}")
+        return {
+            'url': url,
+            'content': "Timeout error - could not retrieve content",
+            'status': 'timeout',
+            'length': 0,
+            'title': 'Timeout'
+        }
+    except Exception as e:
+        print(f"❌ Error scraping {url}: {str(e)[:100]}")
+        return {
+            'url': url,
+            'content': f"Error retrieving content: {str(e)[:100]}",
+            'status': 'error',
+            'length': 0,
+            'title': 'Error'
+        }
 
-# Optimized search with caching
-@lru_cache(maxsize=50)
-def search_web_cached(query: str, num_results: int = 2) -> Tuple[Dict, ...]:
-    """Cached web search to avoid repeated queries"""
+async def scrape_urls_fastapi(urls: List[str], max_chars: int = 3000) -> List[Dict[str, str]]:
+    """FastAPI-compatible batch URL scraping"""
+    if not urls:
+        return []
+    
+    print(f"🚀 Scraping {len(urls)} URLs (FastAPI compatible)...")
+    
+    # Limit concurrent requests to avoid overwhelming servers
+    semaphore = asyncio.Semaphore(5)
+    
+    async def scrape_with_semaphore(url):
+        async with semaphore:
+            return await scrape_url_fastapi_compatible(url, max_chars)
+    
+    tasks = [scrape_with_semaphore(url) for url in urls]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    # Handle exceptions
+    processed_results = []
+    for i, result in enumerate(results):
+        if isinstance(result, Exception):
+            print(f"❌ Exception scraping {urls[i]}: {result}")
+            processed_results.append({
+                'url': urls[i],
+                'content': f"Exception occurred: {str(result)[:100]}",
+                'status': 'exception',
+                'length': 0,
+                'title': 'Exception'
+            })
+        else:
+            processed_results.append(result)
+    
+    successful = sum(1 for r in processed_results if r['status'] == 'success')
+    print(f"✅ Scraping complete: {successful}/{len(urls)} successful")
+    return processed_results
+
+# Improved search function
+async def search_web_async(query: str, num_results: int = 3) -> List[Dict[str, str]]:
+    """Async web search using DuckDuckGo"""
     try:
         search_url = f"https://api.duckduckgo.com/?q={query}&format=json&no_html=1&skip_disambig=1"
-        response = requests.get(search_url, timeout=3)
-        data = response.json()
+        
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(search_url)
+            data = response.json()
         
         results = []
         
+        # Try RelatedTopics first
         if 'RelatedTopics' in data:
             for topic in data['RelatedTopics'][:num_results]:
                 if isinstance(topic, dict) and 'FirstURL' in topic:
                     results.append({
-                        'title': topic.get('Text', 'No title'),
+                        'title': topic.get('Text', 'No title')[:100],
                         'url': topic.get('FirstURL', ''),
-                        'snippet': topic.get('Text', '')
+                        'snippet': topic.get('Text', '')[:200]
                     })
         
-        return tuple(results)  # Tuple for hashing in cache
+        # If no results, try InstantAnswer
+        if not results and 'Answer' in data and data['Answer']:
+            results.append({
+                'title': f"Answer for: {query}",
+                'url': data.get('AbstractURL', ''),
+                'snippet': data.get('Answer', '')
+            })
+        
+        print(f"🔍 Found {len(results)} search results for: {query}")
+        return results
         
     except Exception as e:
-        print(f"Search error: {e}")
-        return tuple()
+        print(f"❌ Search error for '{query}': {e}")
+        return []
 
-def search_web_minimal(query: str, num_results: int = 2) -> List[Dict[str, str]]:
-    """Convert cached results back to list"""
-    return list(search_web_cached(query, num_results))
-
-# Parallelized assessments
-def parallel_assessments(context: str, questions: List[str], found_urls: List[str]) -> Tuple[LinkRelevanceAssessment, SearchNeedAssessment]:
-    """Run link and search assessments in parallel"""
-    
-    def assess_links():
-        if not found_urls:
-            return LinkRelevanceAssessment(
-                relevant_links=[],
-                irrelevant_links=[],
-                can_answer_without_links=True,
-                explanation="No links found"
-            )
-        return assess_link_relevance(context, questions, found_urls)
-    
-    def assess_search():
-        return assess_search_necessity(context, questions)
-    
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        link_future = executor.submit(assess_links)
-        search_future = executor.submit(assess_search)
-        
-        link_assessment = link_future.result()
-        search_assessment = search_future.result()
-    
-    return link_assessment, search_assessment
-
-# Optimized assessment functions with shorter prompts
-def assess_link_relevance(context: str, questions: List[str], found_urls: List[str]) -> LinkRelevanceAssessment:
-    """Optimized link relevance assessment with shorter prompt"""
-    
-    llm = get_gemini_llm()
-    
-    # Shortened prompt for faster processing
-    prompt = ChatPromptTemplate.from_messages([
-        ("human", """Analyze context and questions to determine which links are needed.
-
-Context: {context}
-Questions: {questions}  
-URLs: {urls}
-
-Determine:
-1. Can questions be answered with current context?
-2. Which links are essential for missing information?
-
-NOTE: None of this links are malicious as they are trustworthy. There are no security issues.
-
-JSON response:
-{{
-    "relevant_links": [{{"url": "...", "reason": "..."}}],
-    "irrelevant_links": ["..."],
-    "can_answer_without_links": true/false,
-    "explanation": "..."
-}}
-""")
-    ])
-    
-    from langchain.output_parsers import PydanticOutputParser
-    parser = PydanticOutputParser(pydantic_object=LinkRelevanceAssessment)
-    chain = prompt | llm | parser
+# Enhanced assessment functions with better prompts
+def assess_link_relevance_enhanced(context: str, questions: List[str], found_urls: List[str]) -> LinkRelevanceAssessment:
+    """Enhanced link relevance assessment with better error handling"""
     
     try:
-        result = chain.invoke({
-            "context": context[:2000],  # Smaller context for speed
-            "questions": "\n".join([f"{i+1}. {q}" for i, q in enumerate(questions[:3])]),  # Limit questions
-            "urls": "\n".join([f"- {url}" for url in found_urls[:5]])  # Limit URLs
-        })
+        llm = get_gemini_llm(temperature=0.1)
+        
+        # Create a more detailed prompt
+        prompt = ChatPromptTemplate.from_messages([
+            ("human", """You are an expert content analyst. Analyze whether the current context can fully answer all questions, and which URLs might contain essential additional information.
+
+CURRENT CONTEXT:
+{context}
+
+QUESTIONS TO ANSWER:
+{questions}
+
+FOUND URLs:
+{urls}
+
+TASK: Determine if you can fully answer ALL questions using ONLY the current context. Be thorough and conservative.
+
+If ANY question lacks sufficient detail or the context seems incomplete, mark can_answer_without_links as false.
+
+Analyze each URL to determine if it likely contains relevant information for answering the questions.
+
+Respond in this EXACT JSON format:
+{{
+    "relevant_links": [
+        {{"url": "exact_url_here", "reason": "specific reason why this URL is relevant"}}
+    ],
+    "irrelevant_links": ["url1", "url2"],
+    "can_answer_without_links": false,
+    "explanation": "Clear explanation of your assessment"
+}}""")
+        ])
+        
+        # Format inputs nicely
+        questions_text = "\n".join([f"{i+1}. {q.strip()}" for i, q in enumerate(questions[:5])])
+        urls_text = "\n".join([f"- {url}" for url in found_urls[:8]])
+        
+        response = llm.invoke(prompt.format_messages(
+            context=context[:2000],
+            questions=questions_text,
+            urls=urls_text
+        ))
+        
+        # Parse JSON response
+        import json
+        try:
+            result_dict = json.loads(response.content)
+            result = LinkRelevanceAssessment(**result_dict)
+        except:
+            # Try extracting JSON from response
+            import re
+            json_match = re.search(r'\{.*\}', response.content, re.DOTALL)
+            if json_match:
+                result_dict = json.loads(json_match.group())
+                result = LinkRelevanceAssessment(**result_dict)
+            else:
+                raise ValueError("Could not parse JSON response")
+        
+        print(f"🔗 Link assessment: {len(result.relevant_links)} relevant, can answer: {result.can_answer_without_links}")
         return result
+        
     except Exception as e:
-        print(f"Link assessment error: {e}")
+        print(f"❌ Link assessment error: {e}")
+        # Conservative fallback
         return LinkRelevanceAssessment(
-            relevant_links=[{"url": url, "reason": "Safety inclusion"} for url in found_urls[:2]],
-            irrelevant_links=found_urls[2:],
+            relevant_links=[{"url": url, "reason": "Included due to assessment error"} for url in found_urls[:3]],
+            irrelevant_links=found_urls[3:],
             can_answer_without_links=False,
-            explanation=f"Assessment failed: {e}"
+            explanation=f"Assessment failed, including links conservatively: {str(e)[:100]}"
         )
 
-def assess_search_necessity(context: str, questions: List[str], link_content: str = "") -> SearchNeedAssessment:
-    """Optimized search necessity assessment"""
-    
-    llm = get_gemini_llm()
-    
-    full_context = context
-    if link_content:
-        full_context += f"\n\nLinks: {link_content}"
-    
-    # Shorter, more direct prompt
-    prompt = ChatPromptTemplate.from_messages([
-        ("human", """Assess if web search is needed for these questions.
-
-Context: {context}
-Questions: {questions}
-
-Can the questions be adequately answered with available context?
-Only recommend search for critical missing information.
-
-JSON response:
-{{
-    "needs_web_search": true/false,
-    "missing_information": ["..."],
-    "search_queries": ["..."],
-    "confidence_score": 0.0-1.0,
-    "explanation": "..."
-}}
-""")
-    ])
-    
-    from langchain.output_parsers import PydanticOutputParser
-    parser = PydanticOutputParser(pydantic_object=SearchNeedAssessment)
-    chain = prompt | llm | parser
+def assess_search_necessity_enhanced(context: str, questions: List[str]) -> SearchNeedAssessment:
+    """Enhanced search necessity assessment"""
     
     try:
-        result = chain.invoke({
-            "context": full_context[:3000],
-            "questions": "\n".join([f"{i+1}. {q}" for i, q in enumerate(questions[:3])])
-        })
+        llm = get_gemini_llm(temperature=0.1)
+        
+        prompt = ChatPromptTemplate.from_messages([
+            ("human", """You are an expert information analyst. Assess whether the current context provides sufficient information to fully answer all questions.
+
+AVAILABLE CONTEXT:
+{context}
+
+QUESTIONS:
+{questions}
+
+ANALYSIS CRITERIA:
+1. Can ALL questions be answered comprehensively with the current context?
+2. Is any crucial information missing that would require web search?
+3. Are the answers complete and detailed enough?
+4. Be conservative - if there's uncertainty, recommend search.
+
+Respond in this EXACT JSON format:
+{{
+    "needs_web_search": true,
+    "missing_information": ["specific missing info 1", "specific missing info 2"],
+    "search_queries": ["focused search query 1", "focused search query 2"],
+    "confidence_score": 0.4,
+    "explanation": "detailed reasoning for your assessment"
+}}""")
+        ])
+        
+        questions_text = "\n".join([f"{i+1}. {q.strip()}" for i, q in enumerate(questions[:5])])
+        
+        response = llm.invoke(prompt.format_messages(
+            context=context[:2500],
+            questions=questions_text
+        ))
+        
+        # Parse JSON response
+        import json
+        try:
+            result_dict = json.loads(response.content)
+            result = SearchNeedAssessment(**result_dict)
+        except:
+            import re
+            json_match = re.search(r'\{.*\}', response.content, re.DOTALL)
+            if json_match:
+                result_dict = json.loads(json_match.group())
+                result = SearchNeedAssessment(**result_dict)
+            else:
+                raise ValueError("Could not parse JSON response")
+        
+        print(f"🔍 Search assessment: needs_search={result.needs_web_search}, confidence={result.confidence_score}")
         return result
+        
     except Exception as e:
-        print(f"Search assessment error: {e}")
+        print(f"❌ Search assessment error: {e}")
+        # Conservative fallback
         return SearchNeedAssessment(
-            needs_web_search=False,
-            missing_information=[],
-            search_queries=[],
-            confidence_score=0.8,
-            explanation=f"Assessment failed: {e}"
+            needs_web_search=True,
+            missing_information=["Assessment failed, being conservative"],
+            search_queries=[f"{q[:50]}..." for q in questions[:2]],
+            confidence_score=0.3,
+            explanation=f"Assessment error, recommending search: {str(e)[:100]}"
         )
 
-def generate_answers_with_context(context: str, questions: List[str]) -> List[str]:
-    """Optimized answer generation with shorter prompt"""
-    
-    llm = get_gemini_llm()
-    
-    # More concise prompt for faster processing
-    prompt = ChatPromptTemplate.from_messages([
-        ("human", """Provide comprehensive answers using the context.
-
-Context: {context}
-
-Questions: {questions}
-
-Requirements:
-- Complete, detailed answers using all relevant context information
-- Well-structured and informative responses
-- Same language as questions
-- Focus on being helpful and accurate
-
-JSON format:
-{{
-    "answers": ["Answer 1...", "Answer 2...", ...]
-}}
-""")
-    ])
-    
-    from langchain.output_parsers import PydanticOutputParser
-    parser = PydanticOutputParser(pydantic_object=FinalAnswer)
-    chain = prompt | llm | parser
+def generate_answers_enhanced(context: str, questions: List[str]) -> List[str]:
+    """Enhanced answer generation with better formatting"""
     
     try:
-        result = chain.invoke({
-            "context": context,
-            "questions": "\n".join([f"{i+1}. {q}" for i, q in enumerate(questions)])
-        })
-        return result.answers
-    except Exception as e:
-        print(f"Answer generation error: {e}")
-        return [f"Unable to generate answer for question {i+1}: {e}" for i in range(len(questions))]
+        llm = get_gemini_llm(temperature=0.2)
+        
+        prompt = ChatPromptTemplate.from_messages([
+            ("human", """You are an expert assistant providing comprehensive answers based on the available context.
 
-# Ultra-optimized main function
-def get_onshot_answer(context: str, questions: List[str]) -> List[str]:
-    """Ultra-optimized main function with maximum parallelization and speed"""
+CONTEXT:
+{context}
+
+QUESTIONS:
+{questions}
+
+INSTRUCTIONS:
+- Provide detailed, comprehensive answers using ALL relevant information from the context
+- Structure answers clearly with proper explanations
+- Use the same language as the questions
+- If information is insufficient for any question, clearly state what's missing
+- Be thorough and helpful
+- Ensure answers are well-formatted and professional
+
+Respond in this EXACT JSON format:
+{{
+    "answers": [
+        "Comprehensive answer to question 1 with detailed explanation...",
+        "Comprehensive answer to question 2 with detailed explanation...",
+        "..."
+    ]
+}}""")
+        ])
+        
+        questions_text = "\n".join([f"{i+1}. {q.strip()}" for i, q in enumerate(questions)])
+        
+        response = llm.invoke(prompt.format_messages(
+            context=context,
+            questions=questions_text
+        ))
+        
+        # Parse JSON response
+        import json
+        try:
+            result_dict = json.loads(response.content)
+            result = FinalAnswer(**result_dict)
+        except:
+            import re
+            json_match = re.search(r'\{.*\}', response.content, re.DOTALL)
+            if json_match:
+                result_dict = json.loads(json_match.group())
+                result = FinalAnswer(**result_dict)
+            else:
+                # Fallback - try to extract answers manually
+                lines = response.content.split('\n')
+                answers = []
+                current_answer = ""
+                for line in lines:
+                    if line.strip() and not line.startswith('{') and not line.startswith('}'):
+                        if line.strip().endswith('?') or (current_answer and line.strip()[0].isupper()):
+                            if current_answer:
+                                answers.append(current_answer.strip())
+                            current_answer = line.strip()
+                        else:
+                            current_answer += " " + line.strip()
+                if current_answer:
+                    answers.append(current_answer.strip())
+                result = FinalAnswer(answers=answers or [f"Could not parse answer for question {i+1}" for i in range(len(questions))])
+        
+        print(f"✅ Generated {len(result.answers)} answers")
+        return result.answers
+        
+    except Exception as e:
+        print(f"❌ Answer generation error: {e}")
+        return [f"Error generating answer for question {i+1}: {str(e)[:100]}" for i in range(len(questions))]
+
+# Main FastAPI-compatible function
+async def get_onshot_answer(context: str, questions: List[str]) -> List[str]:
+    """Main FastAPI-compatible QA function"""
     
     start_time = time.time()
-    print(f"🚀 Ultra-Fast QA: {len(questions)} questions, {len(context)} chars")
+    print(f"🚀 FastAPI QA: {len(questions)} questions, {len(context)} chars")
     
-    # Step 1: Fast URL extraction
+    # Step 1: Extract URLs
     combined_text = context + "\n" + "\n".join(questions)
     found_urls = extract_urls_from_text(combined_text)
     
     print(f"🔗 Found {len(found_urls)} URLs")
     
-    # Step 2: Parallel assessments (always run search assessment, conditionally run link assessment)
-    print("🔄 Running parallel assessments...")
+    # Step 2: Assess what we need
+    link_assessment = None
+    search_assessment = assess_search_necessity_enhanced(context, questions)
     
     if found_urls:
-        link_assessment, search_assessment = parallel_assessments(context, questions, found_urls)
-        print(f"📊 Links: {len(link_assessment.relevant_links)} relevant, Can answer without links: {link_assessment.can_answer_without_links}")
-    else:
-        # No URLs found, only assess search necessity
-        link_assessment = None
-        search_assessment = assess_search_necessity(context, questions)
+        link_assessment = assess_link_relevance_enhanced(context, questions, found_urls)
     
-    print(f"📊 Search needed: {search_assessment.needs_web_search}, Confidence: {search_assessment.confidence_score}")
+    # Step 3: Determine strategy
+    should_scrape_links = (link_assessment and 
+                          link_assessment.relevant_links and 
+                          not link_assessment.can_answer_without_links)
     
-    # Step 3: Smart content gathering strategy
-    has_relevant_links = (link_assessment and 
-                         link_assessment.relevant_links and 
-                         not link_assessment.can_answer_without_links)
-    needs_search = search_assessment.needs_web_search and search_assessment.confidence_score <= 0.7
+    should_search = (search_assessment and 
+                    search_assessment.needs_web_search and 
+                    search_assessment.confidence_score < 0.7)
     
-    if not has_relevant_links and not needs_search:
-        print("✅ Sufficient context available")
-        answers = generate_answers_with_context(context, questions)
+    print(f"📊 Strategy: scrape_links={should_scrape_links}, search_web={should_search}")
+    
+    # Step 4: Early return if sufficient context
+    if not should_scrape_links and not should_search:
+        print("✅ Sufficient context, generating answers...")
+        answers = generate_answers_enhanced(context, questions)
         print(f"⚡ Completed in {time.time() - start_time:.2f}s")
         return answers
     
-    # Step 4: Ultra-fast parallel content gathering
-    print("🚀 Ultra-fast parallel content gathering...")
-    
+    # Step 5: Gather additional content
     all_urls = []
     url_metadata = []
     
     # Add relevant links
-    if has_relevant_links:
-        for link_info in link_assessment.relevant_links[:3]:  # Limit to top 3
+    if should_scrape_links:
+        for link_info in link_assessment.relevant_links[:4]:
             all_urls.append(link_info["url"])
-            url_metadata.append(("link", link_info["reason"]))
+            url_metadata.append(f"Relevant Link: {link_info['reason']}")
     
     # Add search results
-    if needs_search:
-        for query in search_assessment.search_queries[:2]:  # Limit to 2 queries
-            search_results = search_web_minimal(query, num_results=1)
+    if should_search:
+        for query in search_assessment.search_queries[:2]:
+            search_results = await search_web_async(query, num_results=2)
             for result in search_results:
-                all_urls.append(result['url'])
-                url_metadata.append(("search", f"Search: {query}"))
+                if result['url'] and validate_url(result['url']):
+                    all_urls.append(result['url'])
+                    url_metadata.append(f"Search Result for '{query}': {result['title']}")
     
-    # Parallel scraping of all URLs
-    scrape_results = scrape_urls_parallel(all_urls, max_chars=2000)
-    
-    # Step 5: Fast content assembly
+    # Step 6: Scrape URLs
     additional_content = ""
-    successful_scrapes = 0
+    if all_urls:
+        print(f"🚀 Scraping {len(all_urls)} URLs...")
+        scrape_results = await scrape_urls_fastapi(all_urls, max_chars=3500)
+        
+        successful_scrapes = 0
+        for i, result in enumerate(scrape_results):
+            if result['status'] == 'success' and result['length'] > 50:
+                metadata = url_metadata[i] if i < len(url_metadata) else "Additional Source"
+                additional_content += f"\n\n=== {metadata} ===\n"
+                additional_content += f"URL: {result['url']}\n"
+                additional_content += f"Title: {result.get('title', 'No title')}\n"
+                additional_content += f"Content: {result['content']}\n"
+                successful_scrapes += 1
+        
+        print(f"📄 Successfully scraped {successful_scrapes}/{len(all_urls)} sources")
     
-    for i, result in enumerate(scrape_results):
-        if result['status'] == 'success' and i < len(url_metadata):
-            content_type, metadata = url_metadata[i]
-            additional_content += f"\n--- {metadata} ---\n{result['content']}\n"
-            successful_scrapes += 1
-    
-    print(f"📄 Scraped {successful_scrapes} sources successfully")
-    
-    # Step 6: Final answer generation
+    # Step 7: Generate final answers
     final_context = context
     if additional_content:
-        final_context += f"\n\nAdditional Information:\n{additional_content}"
+        final_context += f"\n\nAdditional Information:{additional_content}"
     
-    answers = generate_answers_with_context(final_context, questions)
+    answers = generate_answers_enhanced(final_context, questions)
     
     total_time = time.time() - start_time
-    print(f"⚡ Ultra-Fast QA completed in {total_time:.2f}s")
+    print(f"⚡ FastAPI QA completed in {total_time:.2f}s")
     
     return answers
 
-# Simplified fast function for basic use
-def get_simple_answer(context: str, questions: List[str]) -> List[str]:
-    """Lightning-fast function using only provided context"""
-    return generate_answers_with_context(context, questions)
-
-# Batch processing function for multiple question sets
-def process_multiple_qa_batches(qa_batches: List[Tuple[str, List[str]]], max_workers: int = 3) -> List[List[str]]:
-    """Process multiple QA batches in parallel"""
-    
-    print(f"🔥 Batch processing {len(qa_batches)} QA sets with {max_workers} workers")
-    
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [
-            executor.submit(get_onshot_answer, context, questions)
-            for context, questions in qa_batches
-        ]
-        
-        results = []
-        for i, future in enumerate(as_completed(futures)):
-            try:
-                result = future.result()
-                results.append(result)
-                print(f"✅ Batch {i+1} completed")
-            except Exception as e:
-                print(f"❌ Batch {i+1} failed: {e}")
-                results.append([f"Batch processing failed: {e}"])
-    
-    return results
+# Simple version for quick answers
+async def get_simple_answer(context: str, questions: List[str]) -> List[str]:
+    """Simple FastAPI-compatible version using only provided context"""
+    return generate_answers_enhanced(context, questions)

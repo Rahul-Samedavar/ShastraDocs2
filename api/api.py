@@ -196,7 +196,7 @@ async def process_document(
                     return ProcessDocumentResponse(answers=final_answers)
                 
                 if _type == "oneshot":             
-                    final_answers =  get_onshot_answer(content, questions)
+                    final_answers =  await get_onshot_answer(content, questions)
                     return ProcessDocumentResponse(answers=final_answers)          
             else:
                 doc_id = resp

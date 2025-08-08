@@ -126,7 +126,7 @@ class ModularDocumentPreprocessor:
                     return [full_text, 'oneshot']
                 
                 case 'url':
-                    new_context = "URL for Context: " + full_text
+                    new_context = "URL for Context: " + temp_file_path
                     return [new_context, 'oneshot']
                 
                 case 'txt':
@@ -160,8 +160,8 @@ class ModularDocumentPreprocessor:
             
             # Step 3: Create chunks
             chunks = self.text_chunker.chunk_text(full_text)
-            if len(chunks) < 8:
-                    print(f"Only {len(chunks)} chunks formed, going for onesht.")
+            if len(chunks) < 16:
+                    print(f"Only {len(chunks)} chunks formed, going for oneshot.")
                     return [full_text, 'oneshot']
             
             if not chunks:
