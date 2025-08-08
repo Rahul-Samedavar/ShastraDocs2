@@ -29,5 +29,6 @@ pytesseract
 opencv-python
 pillow
 langchain-groq
+langchain-openai
 langchain
 google-generativeai
