@@ -322,7 +322,6 @@ Respond in this EXACT JSON format:
 
 def assess_search_necessity_enhanced(context: str, questions: List[str]) -> SearchNeedAssessment:
     """Enhanced search necessity assessment"""
-    
     try:
         llm = get_gemini_llm(temperature=0.1)
         
@@ -468,11 +467,13 @@ Respond in this EXACT JSON format:
             import re
             json_match = re.search(r'\{.*"answers".*\}', response.content, re.DOTALL)
             if json_match:
+                print("JSON MISMATCH")
                 try:
                     result_dict = json.loads(json_match.group())
                     result = FinalAnswer(**result_dict)
                 except:
                     # Extract answers array specifically
+                    print("Answer was not in proper JSON")
                     answers_match = re.search(r'"answers"\s*:\s*\[(.*?)\]', response.content, re.DOTALL)
                     if answers_match:
                         answers_text = answers_match.group(1)
@@ -487,7 +488,8 @@ Respond in this EXACT JSON format:
                         raise ValueError("Could not extract answers")
             else:
                 # Last resort - split response by questions
-                lines = response.content.split('\n')
+
+                lines = response.content.split('\n') if len(questions) > 1 else response.content
                 answers = []
                 current_answer = ""
                 
@@ -506,12 +508,14 @@ Respond in this EXACT JSON format:
                     else:
                         current_answer += " " + line.strip('"').strip(',')
                 
-                if current_answer and len(current_answer) > 20:
+                if current_answer and len(current_answer) > 2:
                     answers.append(current_answer.strip().strip('"').strip(','))
                 
                 # Ensure we have the right number of answers
                 while len(answers) < len(questions):
                     answers.append(f"Unable to generate answer for question {len(answers)+1}")
+                if len(questions) == len(answers):
+                    answers = ["\n".join(answers)]
                 
                 result = FinalAnswer(answers=answers[:len(questions)])
         
@@ -542,36 +546,14 @@ async def debug_qa_process(context: str, questions: List[str]) -> Dict:
     found_urls = extract_urls_from_text(context + "\n" + "\n".join(questions))
     
     # Assess search necessity
-    search_assessment = assess_search_necessity_enhanced(context, questions)
-    
-    # Assess link relevance if URLs found
-    link_assessment = None
-    if found_urls:
-        link_assessment = assess_link_relevance_enhanced(context, questions, found_urls)
-    
     # Determine strategy
-    should_scrape_links = (link_assessment and 
-                          link_assessment.relevant_links and 
-                          not link_assessment.can_answer_without_links)
+    should_scrape_links = len(found_urls) > 0
     
-    should_search = (search_assessment and 
-                    search_assessment.needs_web_search and 
-                    search_assessment.confidence_score < 0.7)
     
     debug_info = {
         "found_urls": found_urls,
-        "search_assessment": {
-            "needs_search": search_assessment.needs_web_search if search_assessment else False,
-            "confidence": search_assessment.confidence_score if search_assessment else 0,
-            "queries": search_assessment.search_queries if search_assessment else []
-        },
-        "link_assessment": {
-            "can_answer_without_links": link_assessment.can_answer_without_links if link_assessment else True,
-            "relevant_links": link_assessment.relevant_links if link_assessment else []
-        },
         "strategy": {
             "should_scrape_links": should_scrape_links,
-            "should_search": should_search
         },
         "scrape_results": [],
         "final_context_length": len(context),
@@ -579,16 +561,8 @@ async def debug_qa_process(context: str, questions: List[str]) -> Dict:
     }
     
     # If we would scrape/search, do it
-    if should_scrape_links or should_search:
-        all_urls = []
-        
-        if should_scrape_links:
-            all_urls.extend([link["url"] for link in link_assessment.relevant_links[:3]])
-        
-        if should_search:
-            for query in search_assessment.search_queries[:2]:
-                search_results = await search_web_async(query, num_results=2)
-                all_urls.extend([r["url"] for r in search_results if validate_url(r["url"])])
+    if should_scrape_links:
+        all_urls = found_urls
         
         if all_urls:
             scrape_results = await scrape_urls_fastapi(all_urls)
@@ -641,49 +615,21 @@ async def get_onshot_answer(context: str, questions: List[str]) -> List[str]:
     
     print(f"🔗 Found {len(found_urls)} URLs")
     
-    # Step 2: Assess what we need
-    link_assessment = None
-    search_assessment = assess_search_necessity_enhanced(context, questions)
-    
-    if found_urls:
-        link_assessment = assess_link_relevance_enhanced(context, questions, found_urls)
     
     # Step 3: Determine strategy
-    should_scrape_links = (link_assessment and 
-                          link_assessment.relevant_links and 
-                          not link_assessment.can_answer_without_links)
+    should_scrape_links = len(found_urls) > 0
     
-    should_search = (search_assessment and 
-                    search_assessment.needs_web_search and 
-                    search_assessment.confidence_score < 0.7)
-    
-    print(f"📊 Strategy: scrape_links={should_scrape_links}, search_web={should_search}")
+    print(f"📊 Strategy: scrape_links={should_scrape_links}")
     
     # Step 4: Early return if sufficient context
-    if not should_scrape_links and not should_search:
+    if not should_scrape_links:
         print("✅ Sufficient context, generating answers...")
         answers = generate_answers_enhanced(context, questions)
         print(f"⚡ Completed in {time.time() - start_time:.2f}s")
         return answers
     
     # Step 5: Gather additional content
-    all_urls = []
-    url_metadata = []
-    
-    # Add relevant links
-    if should_scrape_links:
-        for link_info in link_assessment.relevant_links[:4]:
-            all_urls.append(link_info["url"])
-            url_metadata.append(f"Relevant Link: {link_info['reason']}")
-    
-    # Add search results
-    if should_search:
-        for query in search_assessment.search_queries[:2]:
-            search_results = await search_web_async(query, num_results=2)
-            for result in search_results:
-                if result['url'] and validate_url(result['url']):
-                    all_urls.append(result['url'])
-                    url_metadata.append(f"Search Result for '{query}': {result['title']}")
+    all_urls = found_urls
     
     # Step 6: Scrape URLs
     additional_content = ""
@@ -693,8 +639,8 @@ async def get_onshot_answer(context: str, questions: List[str]) -> List[str]:
         
         successful_scrapes = 0
         for i, result in enumerate(scrape_results):
-            if result['status'] == 'success' and result['length'] > 50:
-                metadata = url_metadata[i] if i < len(url_metadata) else "Additional Source"
+            if result['status'] == 'success':
+                metadata = "Additional Source"
                 
                 # Better formatting for LLM recognition
                 additional_content += f"\n\n" + "="*50 + "\n"
