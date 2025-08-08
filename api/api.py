@@ -19,7 +19,7 @@ import config.config as config
 
 from LLM.tabular_answer import get_answer_for_tabluar
 from LLM.image_answerer import get_answer_for_image
-from LLM.one_shotter import get_onshot_answer
+from LLM.one_shotter import get_oneshot_answer
 
 # Initialize security
 security = HTTPBearer()
@@ -195,8 +195,18 @@ async def process_document(
                     final_answers = get_answer_for_tabluar(content, questions)
                     return ProcessDocumentResponse(answers=final_answers)
                 
-                if _type == "oneshot":             
-                    final_answers =  await get_onshot_answer(content, questions)
+                if _type == "oneshot":
+                    # final_answers =  await get_oneshot_answer(content, questions)
+                    tasks = [
+                        get_oneshot_answer(content, questions[i:i + 3])
+                        for i in range(0, len(questions), 3)
+                    ]
+                    
+                    # Run all batches in parallel
+                    results = await asyncio.gather(*tasks)
+                    
+                    # Flatten results
+                    final_answers = [ans for batch in results for ans in batch]
                     return ProcessDocumentResponse(answers=final_answers)          
             else:
                 doc_id = resp

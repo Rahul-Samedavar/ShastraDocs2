@@ -220,7 +220,6 @@ async def search_web_async(query: str, num_results: int = 3) -> List[Dict[str, s
         
         results = []
         
-        # Try RelatedTopics first
         if 'RelatedTopics' in data:
             for topic in data['RelatedTopics'][:num_results]:
                 if isinstance(topic, dict) and 'FirstURL' in topic:
@@ -426,11 +425,12 @@ USE ALL OF THESE SECTIONS TO PROVIDE COMPLETE ANSWERS.
 Respond in this EXACT JSON format:
 {{
     "answers": [
-        "Detailed answer incorporating ALL available context information...",
-        "Comprehensive answer using both original and additional context...",
-        "..."
+        "<Correct Answer to the question 1, with detailed explaination.>",
+        "<Correct Answer to the question 2, with detailed explaination only if question 2 exists.>",
+        ...
     ]
-}}""")
+}}
+             """)
         ])
         
         questions_text = "\n".join([f"{i+1}. {q.strip()}" for i, q in enumerate(questions)])
@@ -467,7 +467,6 @@ Respond in this EXACT JSON format:
             import re
             json_match = re.search(r'\{.*"answers".*\}', response.content, re.DOTALL)
             if json_match:
-                print("JSON MISMATCH")
                 try:
                     result_dict = json.loads(json_match.group())
                     result = FinalAnswer(**result_dict)
@@ -488,7 +487,6 @@ Respond in this EXACT JSON format:
                         raise ValueError("Could not extract answers")
             else:
                 # Last resort - split response by questions
-
                 lines = response.content.split('\n') if len(questions) > 1 else response.content
                 answers = []
                 current_answer = ""
@@ -603,7 +601,7 @@ async def debug_qa_process(context: str, questions: List[str]) -> Dict:
     return debug_info
 
 # Main FastAPI-compatible function
-async def get_onshot_answer(context: str, questions: List[str]) -> List[str]:
+async def get_oneshot_answer(context: str, questions: List[str]) -> List[str]:
     """Main FastAPI-compatible QA function"""
     
     start_time = time.time()
@@ -615,8 +613,6 @@ async def get_onshot_answer(context: str, questions: List[str]) -> List[str]:
     
     print(f"🔗 Found {len(found_urls)} URLs")
     
-    
-    # Step 3: Determine strategy
     should_scrape_links = len(found_urls) > 0
     
     print(f"📊 Strategy: scrape_links={should_scrape_links}")

@@ -8,11 +8,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import tempfile
 import os
 
-# OCR Space API configuration
-API_KEY = "K84612411788957"
+
+from config.config import OCR_SPACE_API_KEY
 API_URL = "https://api.ocr.space/parse/image"
 
-def ocr_space_file(filename, api_key=API_KEY, overlay=False, language="eng"):
+assert OCR_SPACE_API_KEY, "OCR_SPACE_API_KEY not set"
+
+def ocr_space_file(filename, api_key=OCR_SPACE_API_KEY, overlay=False, language="eng"):
     """Extract text from image file using OCR Space API"""
     payload = {
         "isOverlayRequired": overlay,
