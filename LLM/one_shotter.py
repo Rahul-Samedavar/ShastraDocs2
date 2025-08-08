@@ -1,13 +1,11 @@
 import os
 import json
 from dotenv import load_dotenv
-from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.pydantic_v1 import BaseModel, Field
 from typing import List
-from config.config import GROQ_API_KEY
-
-
+from config.config import OPENAI_API_KEY  # Changed from GROQ_API_KEY
 import re
 
 # Define the output schema
@@ -17,8 +15,12 @@ class QA(BaseModel):
 class QABatch(BaseModel):
     answers: List[QA]
 
-# Initialize the Groq LLM
-llm = ChatGroq(api_key=GROQ_API_KEY, model_name="qwen/qwen3-32b", reasoning_format="hidden")
+# Initialize the OpenAI LLM
+llm = ChatOpenAI(
+    api_key=OPENAI_API_KEY, 
+    model_name="gpt-4o",  # You can also use "gpt-3.5-turbo", "gpt-4", "gpt-4-turbo", etc.
+    temperature=0  # For consistent responses
+)
 
 # Define the structured output parser
 from langchain.output_parsers import PydanticOutputParser
@@ -42,7 +44,6 @@ def get_onshot_answer(context: str, questions: List[str], retries: int = 3) -> L
     print(f"context: {context}")
     format_instructions = """
 Respond ONLY with a JSON object like this:
-
 {
   "answers": [
     "<Answer to Question 1>",
@@ -56,16 +57,15 @@ Do not include any explanation, formatting, or JSON schema.
 If the context or questions are in a different language, ensure that the answer to each question is given in the same language as that specific question.
 For example if Questions 1 is in Hindi and Question 2 is in English, Answer 1 should be in Hindi and Answer 2 should be in English.
 """
-
+    
     # Adjust parser to expect just list of strings
     class QABatchSimple(BaseModel):
         answers: List[str]
-
+    
     parser = PydanticOutputParser(pydantic_object=QABatchSimple)
     chain = prompt | llm | parser
-
+    
     last_exception = None
-
     for attempt in range(1, retries + 1):
         print(f"[Attempt {attempt}]")
         try:
@@ -78,5 +78,54 @@ For example if Questions 1 is in Hindi and Question 2 is in English, Answer 1 sh
         except Exception as e:
             last_exception = e
             print(f"❌ Attempt {attempt} failed: {e}")
+    
+    raise RuntimeError(f"Failed to get structured answers after {retries} retries.\nLast error: {last_exception}")
 
+# Alternative implementation using OpenAI's structured outputs (if you want to use the newer approach)
+def get_onshot_answer_structured(context: str, questions: List[str], retries: int = 3) -> List[str]:
+    """
+    Alternative implementation using OpenAI's structured outputs feature
+    Available for gpt-4o-mini, gpt-4o-2024-08-06, and later models
+    """
+    print(f"context: {context}")
+    
+    # Use OpenAI's structured outputs
+    llm_structured = ChatOpenAI(
+        api_key=OPENAI_API_KEY,
+        model_name="gpt-4o",
+        temperature=0
+    ).with_structured_output(QABatchSimple)
+    
+    class QABatchSimple(BaseModel):
+        answers: List[str]
+    
+    prompt_structured = ChatPromptTemplate.from_messages([
+        ("system", "You are an expert insurance assistant. Use the context to answer each question accurately."),
+        ("human", """Context:
+{context}
+
+Questions:
+{questions}
+
+Each answer should be descriptive and contains sufficient information from context to answer.
+In case any wrong information is given in context, your answer should refer the wrong answer given and explain the correct answer.
+If the context or questions are in a different language, ensure that the answer to each question is given in the same language as that specific question.
+""")
+    ])
+    
+    chain = prompt_structured | llm_structured
+    
+    last_exception = None
+    for attempt in range(1, retries + 1):
+        print(f"[Attempt {attempt}]")
+        try:
+            result = chain.invoke({
+                "context": context,
+                "questions": questions
+            })
+            return result.answers
+        except Exception as e:
+            last_exception = e
+            print(f"❌ Attempt {attempt} failed: {e}")
+    
     raise RuntimeError(f"Failed to get structured answers after {retries} retries.\nLast error: {last_exception}")
