@@ -3,14 +3,46 @@ import asyncio
 import tempfile
 import os
 import re
-from urllib.parse import urlparse
-from typing import List
+import shutil
+import hashlib
+import atexit
+from urllib.parse import urlparse, unquote
+from typing import List, Tuple
+
 
 class FileDownloader:
+    def __init__(self):
+        # Create a temp directory for this process
+        self.cache_dir = tempfile.mkdtemp(prefix="file_downloader_")
+        print(f"📂 Temp cache directory created: {self.cache_dir}")
 
-    async def download_file(self, url: str, timeout: int = 300, max_retries: int = 3) -> List[str]:
-        """Download any file type from a URL to a temporary file with enhanced error handling."""
+        # Ensure cleanup at process exit
+        atexit.register(self._cleanup_cache_dir)
+
+    def _get_cache_path(self, url: str, ext: str) -> str:
+        """Generate a cache file path for the given URL and extension."""
+        url_hash = hashlib.sha256(url.encode("utf-8")).hexdigest()
+        return os.path.join(self.cache_dir, f"{url_hash}{ext}")
+
+    async def download_file(
+        self, url: str, timeout: int = 300, max_retries: int = 3
+    ) -> Tuple[str, str]:
+        """
+        Download any file type from a URL to the temp cache.
+        Returns (file_path, extension_without_dot)
+        """
         print(f"📥 Downloading file from: {url[:60]}...")
+
+        # Determine file extension (before downloading)
+        parsed_path = unquote(urlparse(url).path)
+        guessed_ext = os.path.splitext(parsed_path)[1] or ""
+
+        # Check if cached version exists
+        if guessed_ext:
+            cache_path = self._get_cache_path(url, guessed_ext)
+            if os.path.exists(cache_path):
+                print(f"⚡ Cache hit! Using cached file: {cache_path}")
+                return cache_path, guessed_ext.lstrip(".")
 
         for attempt in range(max_retries):
             try:
@@ -33,9 +65,7 @@ class FileDownloader:
                         if filename_match:
                             filename = filename_match[0]
                         else:
-                            from urllib.parse import unquote
-                            path = urlparse(url).path
-                            filename = os.path.basename(unquote(path))  # Decode URL encoding
+                            filename = os.path.basename(parsed_path)
 
                         if not filename:
                             filename = "downloaded_file"
@@ -44,38 +74,29 @@ class FileDownloader:
                         if not ext:
                             return url, "url"
 
-                        print(f"   📁 Detected filename: {filename}, extension: {ext}")
-
                         if ext not in ['.pdf', '.docx', '.pptx', '.png', '.xlsx', '.jpeg', '.jpg', '.txt', '.csv']:
-                            # Return extension without dot for consistency
-                            ext_without_dot = ext[1:] if ext.startswith('.') else ext
                             print(f"   ❌ File type not supported: {ext}")
-                            return ['not supported', ext_without_dot]
+                            return ['not supported', ext.lstrip('.')]
 
-                        # Get content length
-                        content_length = response.headers.get('content-length')
-                        if content_length:
-                            total_size = int(content_length)
-                            print(f"   File size: {total_size / (1024 * 1024):.1f} MB")
+                        # Final cache path based on extension
+                        cache_path = self._get_cache_path(url, ext)
 
-                        # Create temp file with same extension
-                        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=ext, prefix="download_")
+                        # Download directly to cache path
+                        with open(cache_path, "wb") as f:
+                            downloaded = 0
+                            content_length = response.headers.get('content-length')
+                            total_size = int(content_length) if content_length else None
 
-                        # Write to file
-                        downloaded = 0
-                        async for chunk in response.content.iter_chunked(16384):
-                            temp_file.write(chunk)
-                            downloaded += len(chunk)
+                            async for chunk in response.content.iter_chunked(16384):
+                                f.write(chunk)
+                                downloaded += len(chunk)
 
-                            if content_length and downloaded % (1024 * 1024) == 0:
-                                progress = (downloaded / total_size) * 100
-                                print(f"   Progress: {progress:.1f}% ({downloaded / (1024*1024):.1f} MB)")
+                                if total_size and downloaded % (1024 * 1024) == 0:
+                                    progress = (downloaded / total_size) * 100
+                                    print(f"   Progress: {progress:.1f}% ({downloaded / (1024*1024):.1f} MB)")
 
-                        temp_file.close()
-                        print(f"✅ File downloaded successfully: {temp_file.name}")
-                        # Return extension without the dot for consistency with modular_preprocessor
-                        ext_without_dot = ext[1:] if ext.startswith('.') else ext
-                        return temp_file.name, ext_without_dot
+                        print(f"✅ File downloaded successfully: {cache_path}")
+                        return cache_path, ext.lstrip('.')
 
             except asyncio.TimeoutError:
                 print(f"   ⏰ Timeout on attempt {attempt + 1}")
@@ -95,16 +116,11 @@ class FileDownloader:
 
         raise Exception(f"Failed to download file after {max_retries} attempts")
 
-    def cleanup_temp_file(self, temp_path: str) -> None:
-        """
-        Clean up temporary file.
-        
-        Args:
-            temp_path: Path to the temporary file to delete
-        """
-        if temp_path and os.path.exists(temp_path):
+    def _cleanup_cache_dir(self):
+        """Remove the entire cache directory."""
+        if os.path.exists(self.cache_dir):
             try:
-                os.unlink(temp_path)
-                print(f"🗑️ Cleaned up temporary file: {temp_path}")
+                shutil.rmtree(self.cache_dir)
+                print(f"🗑️ Deleted temp cache directory: {self.cache_dir}")
             except Exception as e:
-                print(f"⚠️ Warning: Could not delete temporary file {temp_path}: {e}")
+                print(f"⚠️ Could not delete cache directory {self.cache_dir}: {e}")
