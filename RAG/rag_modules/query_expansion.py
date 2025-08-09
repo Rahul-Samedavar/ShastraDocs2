@@ -42,9 +42,11 @@ Examples of good breakdown:
 
 
 Provide only {QUERY_EXPANSION_COUNT} focused sub-questions, one per line, without numbering or additional formatting:
-
-#### RESPONSE:
-Here are the focused sub queries:
+Example Reponse:
+Here are the focused sub queries
+subquery1
+subquery2 (if exists)
+...
 
 """
 
@@ -60,14 +62,19 @@ Here are the focused sub queries:
             if response:
                 sub_queries = response.strip().split('\n')
                 for query in sub_queries:
-                    if len(expanded_queries) >= QUERY_EXPANSION_COUNT:  # Stop when we have enough
+                    if len(expanded_queries) >= QUERY_EXPANSION_COUNT + 1:  # Stop when we have enough
                         break
                     query = query.strip()
                     # Remove any numbering or bullet points that might be added
                     query = re.sub(r'^[\d\.\-\*\s]+', '', query).strip()
                     if query and len(query) > 10:
                         expanded_queries.append(query)
-            
+
+
+            if len(expanded_queries) > 1:
+                expanded_queries.pop(0)
+        
+
             # If we don't have enough sub-queries, fall back to using the original
             if len(expanded_queries) < QUERY_EXPANSION_COUNT:
                 expanded_queries = [original_query]

@@ -87,7 +87,7 @@ class ModularDocumentPreprocessor:
         Process a single document: download, extract, chunk, embed, and store.
         
         Args:
-            document_url: URL of the PDF document
+            document_url: URL of the document
             force_reprocess: If True, reprocess even if already processed
             timeout: Download timeout in seconds (default: 300s/5min)
             
@@ -106,7 +106,7 @@ class ModularDocumentPreprocessor:
         
         temp_file_path = None
         try:
-            # Step 1: Download PDF
+            # Step 1: Download Document
             temp_file_path, ext = await self.file_downloader.download_file(document_url, timeout=timeout)
             
             if temp_file_path == 'not supported':

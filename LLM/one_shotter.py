@@ -414,7 +414,8 @@ CRITICAL INSTRUCTIONS:
 4. BE THOROUGH: Don't just use the original context - actively look for and incorporate information from scraped websites
 5. DETAILED EXPLANATIONS: Provide comprehensive, well-structured answers with specific details
 6. IF MISSING INFO: Only state information is missing if it's truly not available in ANY part of the provided context
-
+7. First give the correct answer and then explain in short, you don't need to outline your thought process.
+8. Never make any assumptions on your own.
 The context may contain multiple sections:
 - Original context
 - Additional Information from relevant links  
@@ -425,12 +426,12 @@ USE ALL OF THESE SECTIONS TO PROVIDE COMPLETE ANSWERS.
 Respond in this EXACT JSON format:
 {{
     "answers": [
-        "<Correct Answer to the question 1, with detailed explaination.>",
-        "<Correct Answer to the question 2, with detailed explaination only if question 2 exists.>",
+        "<Correct Answer to the question 1, followed by  explaination.>",
+        "<Correct Answer to the question 2, followed by  explaination only if question 2 exists.>",
         ...
     ]
 }}
-             """)
+        """)
         ])
         
         questions_text = "\n".join([f"{i+1}. {q.strip()}" for i, q in enumerate(questions)])

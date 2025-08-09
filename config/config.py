@@ -32,13 +32,13 @@ GROQ_MODEL_LITE = "llama3-8b-8192"
 BEARER_TOKEN = os.getenv("BEARER_TOKEN")
 
 # Chunking
-CHUNK_SIZE = 400
-CHUNK_OVERLAP = 100
+CHUNK_SIZE = 400 * 4
+CHUNK_OVERLAP = 100 * 4
 
 # Retrieval Settings
-TOP_K = 15
+TOP_K = 9
 SCORE_THRESHOLD = 0.3 
-RERANK_TOP_K =  9 # 9*400 = 3600, < 4000, some tokens reserved for questions  
+RERANK_TOP_K =  7 # 9*400 = 3600, < 4000, some tokens reserved for questions  
 BM25_WEIGHT = 0.3 
 SEMANTIC_WEIGHT = 0.7
 
@@ -49,7 +49,7 @@ ENABLE_QUERY_EXPANSION = True
 RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 QUERY_EXPANSION_COUNT = 3 
 SCORE_THRESHOLD = 0.3 
-MAX_CONTEXT_LENGTH = 4000
+MAX_CONTEXT_LENGTH = 4000*4
 
 USE_TOTAL_BUDGET_APPROACH = True  
 
@@ -110,8 +110,8 @@ def get_provider_configs():
     configs["openai"] = [{
             "name": sequence[i],
             "api_key": os.getenv(f"OPENAI_API_KEY_{i}"),
-            "model": os.getenv(f"OPENAI_MODEL_{i}", DEFAULT_GEMINI_MODEL)
-        } for i in range(10) if os.getenv(f"GEMINI_API_KEY_{i}", "")
+            "model": os.getenv(f"OPENAI_MODEL_{i}", DEFAULT_OPENAI_MODEL)
+        } for i in range(10) if os.getenv(f"OPENAI_MODEL_{i}", "")
     ]
     
     return configs

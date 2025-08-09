@@ -7,3 +7,4 @@ test*
 all-MiniLM-L6-v2
 cross-encoder/ms-marco-MiniLM-L-6-v2
 test
+RAG/rag_embeddings/[a-z]*
