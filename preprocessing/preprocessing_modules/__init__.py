@@ -2,7 +2,7 @@
 
 from .pdf_downloader import PDFDownloader
 from .file_downloader import FileDownloader
-from .text_extractor import TextExtractor
+from .pdf_extractor import TextExtractor
 from .text_chunker import TextChunker
 from .embedding_manager import EmbeddingManager
 from .vector_storage import VectorStorage

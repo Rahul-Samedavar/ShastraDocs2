@@ -10,7 +10,7 @@ from typing import List, Dict, Any
 from pathlib import Path
 
 from config.config import OUTPUT_DIR
-from .text_extractor import TextExtractor
+from .pdf_extractor import TextExtractor
 from .text_chunker import TextChunker
 from .embedding_manager import EmbeddingManager
 from .vector_storage import VectorStorage

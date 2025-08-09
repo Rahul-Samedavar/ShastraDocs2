@@ -35,3 +35,6 @@ langchain-google-genai
 google-generativeai
 bs4
 aiodns
+
+pymupdf
+pandas

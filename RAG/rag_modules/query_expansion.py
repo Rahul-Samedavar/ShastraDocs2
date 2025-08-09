@@ -76,7 +76,7 @@ subquery2 (if exists)
         
 
             # If we don't have enough sub-queries, fall back to using the original
-            if len(expanded_queries) < QUERY_EXPANSION_COUNT:
+            if len(expanded_queries) < 1:
                 expanded_queries = [original_query]
             
             # Ensure we have exactly QUERY_EXPANSION_COUNT queries
