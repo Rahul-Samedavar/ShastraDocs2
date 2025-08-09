@@ -116,7 +116,7 @@ class ModularDocumentPreprocessor:
             full_text = ""
             match ext:
                 case 'pdf':
-                    full_text = await self.text_extractor.extract_text_from_pdf(temp_file_path)
+                    full_text = self.text_extractor.extract_text_from_pdf(temp_file_path)
                 
                 case 'docx':
                     full_text = extract_docx(temp_file_path)
