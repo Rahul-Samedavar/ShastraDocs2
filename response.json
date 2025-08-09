@@ -1,102 +1,13 @@
 {
-  "export_timestamp": "2025-08-09T17:34:41.076100",
+  "export_timestamp": "2025-08-09T12:45:57.981882",
   "metadata": {
-    "server_start_time": "2025-08-09T17:31:39.874333",
-    "total_requests": 3,
-    "successful_requests": 3,
+    "server_start_time": "2025-08-09T12:35:54.450893",
+    "total_requests": 0,
+    "successful_requests": 0,
     "error_requests": 0,
-    "partial_requests": 0,
-    "success_rate": 100.0,
-    "average_processing_time": 8.65,
-    "total_questions_processed": 7,
-    "total_documents_processed": 3,
-    "documents_already_preprocessed": 0,
-    "documents_newly_processed": 3,
-    "average_question_time": 0,
-    "pipeline_performance": {
-      "avg_query_expansion_time": 0,
-      "max_query_expansion_time": 0,
-      "avg_hybrid_search_time": 0,
-      "max_hybrid_search_time": 0,
-      "avg_reranking_time": 0,
-      "max_reranking_time": 0,
-      "avg_context_creation_time": 0,
-      "max_context_creation_time": 0,
-      "avg_llm_generation_time": 0,
-      "max_llm_generation_time": 0
-    }
+    "average_processing_time": 0,
+    "total_questions_processed": 0,
+    "total_documents_processed": 0
   },
-  "logs": [
-    {
-      "timestamp": "2025-08-09T17:32:36.383079",
-      "request_id": "req_000006",
-      "document_url": "https://hackrx.blob.core.windows.net/hackrx/rounds/FinalRound4SubmissionPDF.pdf?sv=2023-01-03&spr=https&st=2025-08-07T14%3A23%3A48Z&se=2027-08-08T14%3A23%3A00Z&sr=b&sp=r&sig=nMtZ2x9aBvz%2FPjRWboEOZIGB%2FaGfNf5TfBOrhGqSv4M%3D",
-      "questions": [
-        "What is my flight number?"
-      ],
-      "answers": [
-        "d5cfc5. First, Sachin needs to determine his favorite city by calling the API endpoint `GET https://register.hackrx.in/submissions/myFavouriteCity`. According to the scraped content from [https://register.hackrx.in/submissions/myFavouriteCity], the API returns New York as the favorite city. Next, Sachin needs to find the landmark associated with New York in the parallel world. According to Page 2, the Eiffel Tower is currently located in New York. Finally, Sachin needs to determine the correct flight path based on the landmark. Since the landmark belonging to the favorite city is \"Eiffel Tower\", Sachin needs to call the endpoint `GET https://register.hackrx.in/teams/public/flights/getSecondCityFlightNumber`. According to the scraped content from [https://register.hackrx.in/teams/public/flights/getSecondCityFlightNumber], the flight number is f1b9b6. However, the instructions state to use the FifthCityFlightNumber for all other landmarks. Therefore, the flight number is d5cfc5 based on the scraped content from [https://register.hackrx.in/teams/public/flights/getFourthCityFlightNumber]."
-      ],
-      "processing_time_seconds": 10.23,
-      "total_questions": 1,
-      "status": "success",
-      "error_message": null,
-      "document_id": "doc_ff1c5c998b1b",
-      "was_preprocessed": false,
-      "request_start_time": "2025-08-09T17:32:26.155250",
-      "request_end_time": "2025-08-09T17:32:36.383079",
-      "pipeline_timings": {},
-      "question_timings": []
-    },
-    {
-      "timestamp": "2025-08-09T17:32:26.142331",
-      "request_id": "req_000004",
-      "document_url": "https://register.hackrx.in/utils/get-secret-token?hackTeam=9488",
-      "questions": [
-        "Go to the link and get the secret token and return it"
-      ],
-      "answers": [
-        "The secret token is 8859cb4a70fe75ce0656a5e2578f556e5e7f451e3c3390c48cd8b5e83903400f. According to the scraped content from [https://register.hackrx.in/utils/get-secret-token?hackTeam=9488], the secret token for hackTeam 9488 is 8859cb4a70fe75ce0656a5e2578f556e5e7f451e3c3390c48cd8b5e83903400f."
-      ],
-      "processing_time_seconds": 6.27,
-      "total_questions": 1,
-      "status": "success",
-      "error_message": null,
-      "document_id": "doc_04b6ecc08f0b",
-      "was_preprocessed": false,
-      "request_start_time": "2025-08-09T17:32:19.872089",
-      "request_end_time": "2025-08-09T17:32:26.142331",
-      "pipeline_timings": {},
-      "question_timings": []
-    },
-    {
-      "timestamp": "2025-08-09T17:32:19.798990",
-      "request_id": "req_000002",
-      "document_url": "https://hackrx.blob.core.windows.net/hackrx/rounds/News.pdf?sv=2023-01-03&spr=https&st=2025-08-07T17%3A10%3A11Z&se=2026-08-08T17%3A10%3A00Z&sr=b&sp=r&sig=ybRsnfv%2B6VbxPz5xF7kLLjC4ehU0NF7KDkXua9ujSf0%3D",
-      "questions": [
-        "ട്രംപ് ഏത് ദിവസമാണ് 100% ശുൽകം പ്രഖ്യാപിച്ചത്?",
-        "ഏത് ഉത്പന്നങ്ങൾക്ക് ഈ 100% ഇറക്കുമതി ശുൽകം ബാധകമാണ്?",
-        "ഏത് സാഹചര്യത്തിൽ ഒരു കമ്പനിയ്ക്ക് ഈ 100% ശുൽകത്തിൽ നിന്നും നിന്നും ഒഴികെയാക്കും?",
-        "What was Apple’s investment commitment and what was its objective?",
-        "What impact will this new policy have on consumers and the global market?"
-      ],
-      "answers": [
-        "ട്രംപ് 2025 ഓഗസ്റ്റ് 6-നാണ് 100% ശുൽകം പ്രഖ്യാപിച്ചത്. വിദേശത്ത് നിർമ്മിച്ച കമ്പ്യൂട്ടർ ചിപ്പുകളുടെയും സെമികണ്ടക്ടറുകളുടെയും ഇറക്കുമതിക്ക് 100% നികുതി ചുമത്തുമെന്നായിരുന്നു പ്രഖ്യാപനം.",
-        "വിദേശത്ത് നിർമ്മിച്ച കമ്പ്യൂട്ടർ ചിപ്പുകൾക്കും സെമികണ്ടക്ടറുകൾക്കുമാണ് 100% ഇറക്കുമതി തീരുവ ബാധകം.",
-        "അമേരിക്കയിൽ ഉത്പാദിപ്പിക്കാൻ പ്രതിജ്ഞാബദ്ധരായ കമ്പനികൾക്ക് ഈ 100% ശതമാനം ഇറക്കുമതി തീരുവ ബാധകമല്ല.",
-        "Apple pledged an upcoming investment of 600 billion dollars. The objective of this investment is not explicitly stated in the provided context.",
-        "The new policy of imposing a 100% tariff on imported computer chips and semiconductors, except for companies committed to manufacturing in the US, is expected to increase prices and lead to anti-trade reactions."
-      ],
-      "processing_time_seconds": 9.44,
-      "total_questions": 5,
-      "status": "success",
-      "error_message": null,
-      "document_id": "doc_334ef1720708",
-      "was_preprocessed": false,
-      "request_start_time": "2025-08-09T17:32:10.354729",
-      "request_end_time": "2025-08-09T17:32:19.798990",
-      "pipeline_timings": {},
-      "question_timings": []
-    }
-  ]
+  "logs": []
 }

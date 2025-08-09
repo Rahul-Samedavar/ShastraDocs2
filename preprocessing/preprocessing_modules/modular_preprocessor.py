@@ -191,11 +191,11 @@ class ModularDocumentPreprocessor:
         except Exception as e:
             print(f"❌ Error processing document {doc_id}: {str(e)}")
             raise
-        finally:
+        # finally:
             # Clean up temporary file - but NOT for images since they need the file path
             # Images return a third element indicating no cleanup needed
-            if temp_file_path and ext not in ['png', 'jpeg', 'jpg']:
-                self.file_downloader.cleanup_temp_file(temp_file_path)
+            # if temp_file_path and ext not in ['png', 'jpeg', 'jpg']:
+            #     self.file_downloader.cleanup_temp_file(temp_file_path)
     
     async def process_multiple_documents(self, document_urls: List[str], force_reprocess: bool = False) -> Dict[str, str]:
         """
