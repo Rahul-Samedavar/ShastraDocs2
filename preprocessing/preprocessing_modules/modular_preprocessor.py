@@ -127,7 +127,7 @@ class ModularDocumentPreprocessor:
                 
                 case 'url':
                     new_context = "URL for Context: " + temp_file_path
-                    return [new_context, 'oneshot']
+                    return ['unsupported', 'The submitted URL does not include any document. I can only answer questions based on the context of a provided document.']
                 
                 case 'txt':
                     with open (temp_file_path, 'r') as f:

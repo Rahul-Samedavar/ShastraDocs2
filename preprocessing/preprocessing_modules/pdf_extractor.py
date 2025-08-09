@@ -198,7 +198,7 @@ class TextExtractor:
                 if all_blocks:
                     # Sort by y-coordinate (top to bottom), handle missing bbox gracefully
                     try:
-                        all_blocks.sort(key=lambda x: -x.get('bbox', [0, 0, 0, 0])[1])
+                        all_blocks.sort(key=lambda x: x.get('bbox', [0, 0, 0, 0])[1])
                     except:
                         # If sorting fails, keep original order
                         pass

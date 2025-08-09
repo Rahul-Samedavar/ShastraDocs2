@@ -20,6 +20,9 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
+
+# BEARER_TOKEN = os.getenv("BEARER_TOKEN")
+
 API_KEYS = [
     os.getenv("GEMINI_API_KEY_1"),
     os.getenv("GEMINI_API_KEY_2"),
@@ -415,9 +418,10 @@ CRITICAL INSTRUCTIONS:
 5. DETAILED EXPLANATIONS: Provide comprehensive, well-structured answers with specific details
 6. IF MISSING INFO: Only state information is missing if it's truly not available in ANY part of the provided context
 7. First give the correct answer and then explain in short, you don't need to outline your thought process.
-8. Never make any assumptions on your own.
+8. Never make any assumptions on your own. Your answer should be something thats always in the context given. 
 9. If your answer is based on context, then mention the exact part referenced.
 10. If the context is of different than actual language, then reference should in contexts's language itself followed by its meaning in users queries language.
+             
 
 The context may contain multiple sections:
 - Original context
