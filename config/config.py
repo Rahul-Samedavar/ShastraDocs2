@@ -20,10 +20,9 @@ BEARER_TOKEN = os.getenv("BEARER_TOKEN")
 CHUNK_SIZE = 400 * 4
 CHUNK_OVERLAP = 100 * 4
 
-# Retrieval Settings
-TOP_K = 9
+TOP_K = 12
 SCORE_THRESHOLD = 0.3 
-RERANK_TOP_K =  7 # 9*400 = 3600, < 4000, some tokens reserved for questions  
+RERANK_TOP_K =  9 
 BM25_WEIGHT = 0.3 
 SEMANTIC_WEIGHT = 0.7
 
@@ -38,8 +37,8 @@ MAX_CONTEXT_LENGTH = 4000*4
 
 USE_TOTAL_BUDGET_APPROACH = True  
 
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"
-BATCH_SIZE = 4
+EMBEDDING_MODEL ="BAAI/bge-large-en"  
+BATCH_SIZE = 8
 
 OUTPUT_DIR = os.getenv("RAG_EMBEDDINGS_PATH", "./RAG/rag_embeddings")
 
