@@ -14,21 +14,6 @@ TEMPERATURE = 0.4
 OCR_SPACE_API_KEY = os.getenv("OCR_SPACE_API_KEY", "")
 assert OCR_SPACE_API_KEY, "OCR_SPACE_API_KEY not set"
 
-# OpenAI Settings
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "") 
-OPENAI_MODEL = "gpt-3.5-turbo"
-
-# Gemini Settings
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "") 
-GEMINI_MODEL = "gemini-1.5-flash"
-
-GROQ_API_KEY = os.getenv("GROQ_API_KEY") 
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama3-70b-8192")
-
-GROQ_API_KEY_LITE = os.getenv("GROQ_API_KEY_LITE") 
-GROQ_MODEL_LITE = "llama3-8b-8192"
-
-
 BEARER_TOKEN = os.getenv("BEARER_TOKEN")
 
 # Chunking
@@ -63,7 +48,6 @@ API_HOST = "0.0.0.0"
 API_PORT = 8000
 API_RELOAD = True
 
-assert OPENAI_API_KEY, "OPENAI KEY NOT SET"
 assert GEMINI_API_KEY, "GEMINI KEY NOT SET"
 assert GROQ_API_KEY, "GROQ KEY NOT SET"
 assert GROQ_API_KEY_LITE, "GROQ KEY LITE NOT SET"
@@ -95,7 +79,7 @@ def get_provider_configs():
     # Gemini configurations
     # You can add multiple Gemini instances with different API keys
     # set API KEYS ass GEMINI_API_KEY_1, GEMINI_API_KEY_2... in your environment variables , .env
-    DEFAULT_GEMINI_MODEL = "gemini-1.5-flash"
+    DEFAULT_GEMINI_MODEL = "gemini-2.0-flash"
     configs["gemini"] = [{
             "name": sequence[i],
             "api_key": os.getenv(f"GEMINI_API_KEY_{i}"),

@@ -2,8 +2,11 @@ from groq import Groq
 import os
 from typing import Optional
 
-from config.config import GROQ_API_KEY_LITE, GROQ_MODEL_LITE
+from dotenv import load_dotenv
+load_dotenv()
 
+GROQ_API_KEY_LITE = os.getenv("GROQ_API_KEY_LITE") 
+GROQ_MODEL_LITE = "llama3-8b-8192"
 
 client = Groq(api_key=GROQ_API_KEY_LITE)
 

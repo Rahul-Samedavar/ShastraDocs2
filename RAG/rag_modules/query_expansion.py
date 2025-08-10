@@ -9,7 +9,6 @@ from typing import List
 from LLM.lite_llm import generate_lite
 from config.config import ENABLE_QUERY_EXPANSION, QUERY_EXPANSION_COUNT
 
-
 class QueryExpansionManager:
     """Manages query expansion for better information retrieval."""
     
@@ -49,7 +48,6 @@ subquery2 (if exists)
 ...
 
 """
-
 
             response = generate_lite(
                 expansion_prompt,
