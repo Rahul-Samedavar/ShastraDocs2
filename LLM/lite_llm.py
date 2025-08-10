@@ -5,8 +5,13 @@ from typing import Optional
 from dotenv import load_dotenv
 load_dotenv()
 
-GROQ_API_KEY_LITE = os.getenv("GROQ_API_KEY_LITE") 
+GROQ_API_KEY_LITE = os.getenv("GROQ_API_KEY_LITE", "")
+if GROQ_API_KEY_LITE == "":
+    GROQ_API_KEY_LITE = os.getenv("GROQ_API_KEY_LITE") 
+
 GROQ_MODEL_LITE = "llama3-8b-8192"
+
+assert GROQ_API_KEY_LITE, "GROQ KEY LITE NOT SET"
 
 client = Groq(api_key=GROQ_API_KEY_LITE)
 

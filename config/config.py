@@ -48,9 +48,6 @@ API_HOST = "0.0.0.0"
 API_PORT = 8000
 API_RELOAD = True
 
-assert GEMINI_API_KEY, "GEMINI KEY NOT SET"
-assert GROQ_API_KEY, "GROQ KEY NOT SET"
-assert GROQ_API_KEY_LITE, "GROQ KEY LITE NOT SET"
 
 sequence = ["primary", "secondary", "ternary", "quaternary", "quinary", "senary", "septenary", "octonary", "nonary", "denary"]
 
@@ -69,7 +66,7 @@ def get_provider_configs():
     # Groq configurations
     # You can add multiple Groq instances with different API keys
     # set API KEYS ass GROQ_API_KEY_1, GROQ_API_KEY_2... in your environment variables , .env
-    DEFAULT_GROQ_MODEL = "qwen/qwen3-32b"
+    DEFAULT_GROQ_MODEL = os.getenv("DEFAULT_GROQ_MODEL", "qwen/qwen3-32b")
     configs["groq"] = [{
         "name": sequence[i],
         "api_key": os.getenv(f"GROQ_API_KEY_{i}"),
@@ -79,7 +76,7 @@ def get_provider_configs():
     # Gemini configurations
     # You can add multiple Gemini instances with different API keys
     # set API KEYS ass GEMINI_API_KEY_1, GEMINI_API_KEY_2... in your environment variables , .env
-    DEFAULT_GEMINI_MODEL = "gemini-2.0-flash"
+    DEFAULT_GEMINI_MODEL = os.getenv("DEFAULT_GEMINI_MODEL", "gemini-2.0-flash")
     configs["gemini"] = [{
             "name": sequence[i],
             "api_key": os.getenv(f"GEMINI_API_KEY_{i}"),
@@ -90,7 +87,7 @@ def get_provider_configs():
     # OpenAI configurations
     # You can add multiple OpenAI instances with different API keys
     # set API KEYS ass OPENAI_API_KEY_1, OPENAI_API_KEY_2... in your environment variables , .env
-    DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
+    DEFAULT_OPENAI_MODEL = os.getenv("DEFAULT_OPENAI_MODEL", "gpt-4o-mini")
     configs["openai"] = [{
             "name": sequence[i],
             "api_key": os.getenv(f"OPENAI_API_KEY_{i}"),

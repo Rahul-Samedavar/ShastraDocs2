@@ -9,9 +9,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+APIKEY = os.getenv("GEMINI_API_KEY_IMAGE")
+if not APIKEY:
+    APIKEY = os.getenv("GEMINI_API_KEY_1")
 
-
-genai.configure(api_key=os.getenv("GEMIN_API_KEY_IMAGE"))
+genai.configure(api_key=APIKEY)
 
 def load_image(image_source: str) -> Image.Image:
     """Load image from a URL or local path."""

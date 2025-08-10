@@ -10,8 +10,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+API_KEY = os.environ.get("GROQ_API_KEY_TABULAR")
+if not API_KEY:
+    os.environ.get("GROQ_API_KEY_1")
+
 GROQ_LLM = ChatGroq(
-    groq_api_key=os.environ.get("GROQ_API_KEY_TABULAR"),
+    groq_api_key=API_KEY,
     model_name="qwen/qwen3-32b" 
 )
 
