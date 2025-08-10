@@ -69,7 +69,7 @@ api_key_manager = FastAPICompatibleKeyManager(API_KEYS)
 def get_cached_gemini_llm(api_key: str, temperature: float = 0) -> ChatGoogleGenerativeAI:
     return ChatGoogleGenerativeAI(
         google_api_key=api_key,
-        model="gemini-2.5-flash",
+        model="gemini-2.0-flash",
         temperature=temperature,
         convert_system_message_to_human=True
     )
@@ -137,9 +137,10 @@ async def scrape_url_fastapi_compatible(url: str, max_chars: int = 3000) -> Dict
             soup = BeautifulSoup(response.content, 'html.parser')
             
             # Remove unwanted elements
-            for tag in soup(['script', 'style', 'nav', 'footer', 'header', 'aside', 'advertisement']):
+            for tag in soup(['script', 'style', 'nav', 'footer', 'header', 'aside', 'advertisement', 'message']):
                 tag.decompose()
             
+
             # Extract clean text
             text_content = soup.get_text(separator=' ', strip=True)
             
@@ -147,6 +148,7 @@ async def scrape_url_fastapi_compatible(url: str, max_chars: int = 3000) -> Dict
             cleaned_text = ' '.join(text_content.split())
             if len(cleaned_text) > max_chars:
                 cleaned_text = cleaned_text[:max_chars] + "..."
+
             
             return {
                 'url': url,
@@ -183,7 +185,7 @@ async def scrape_urls_fastapi(urls: List[str], max_chars: int = 3000) -> List[Di
     print(f"🚀 Scraping {len(urls)} URLs (FastAPI compatible)...")
     
     # Limit concurrent requests to avoid overwhelming servers
-    semaphore = asyncio.Semaphore(5)
+    semaphore = asyncio.Semaphore(7)
     
     async def scrape_with_semaphore(url):
         async with semaphore:
@@ -407,22 +409,18 @@ def generate_answers_enhanced(context: str, questions: List[str]) -> List[str]:
 FULL CONTEXT TO ANALYZE:
 {context}
 
-QUESTIONS TO ANSWER:
-{questions}
-
 CRITICAL INSTRUCTIONS:
 1. READ AND USE ALL CONTEXT: Carefully examine the entire context, including any "Additional Information" sections
 2. COMPREHENSIVE ANSWERS: Use ALL relevant information from BOTH the original context AND any additional scraped content
-3. CITE SOURCES: When using information from additional sources, mention where it came from (e.g., "According to the scraped content from [URL]...")
+3. CITE SOURCES: When using information from additional sources, mention where it came from.
 4. BE THOROUGH: Don't just use the original context - actively look for and incorporate information from scraped websites
 5. DETAILED EXPLANATIONS: Provide comprehensive, well-structured answers with specific details
 6. IF MISSING INFO: Only state information is missing if it's truly not available in ANY part of the provided context
-7. First give the correct answer and then explain in short, you don't need to outline your thought process.
-8. Never make any assumptions on your own. Your answer should be something thats always in the context given. 
-9. If your answer is based on context, then mention the exact part referenced.
-10. If the context is of different than actual language, then reference should in contexts's language itself followed by its meaning in users queries language.
+7. Your explaination should be short but informative.
+8. If your answer is based on context, then mention the exact part referenced.
+9. If the context is of different than actual language, then reference should in contexts's language itself followed by its meaning in users queries language.             
+10. Think thoroughly before answering.
              
-
 The context may contain multiple sections:
 - Original context
 - Additional Information from relevant links  
@@ -433,11 +431,15 @@ USE ALL OF THESE SECTIONS TO PROVIDE COMPLETE ANSWERS.
 Respond in this EXACT JSON format:
 {{
     "answers": [
-        "<Correct Answer to the question 1, followed by  explaination.>",
-        "<Correct Answer to the question 2, followed by  explaination only if question 2 exists.>",
+        "<Correct Answer to the question 1>",
+        "<Correct Answer to the question 2 only if question 2 exists.>",
         ...
     ]
 }}
+             
+
+QUESTIONS TO ANSWER:
+{questions}
         """)
         ])
         
@@ -526,13 +528,6 @@ Respond in this EXACT JSON format:
                 result = FinalAnswer(answers=answers[:len(questions)])
         
         print(f"✅ Generated {len(result.answers)} answers")
-        
-        # Debug: Check if answers reference additional content
-        for i, answer in enumerate(result.answers):
-            if any(keyword in answer.lower() for keyword in ['according to', 'from the', 'scraped', 'additional', 'source']):
-                print(f"🎯 Answer {i+1} references additional content: True")
-            else:
-                print(f"⚠️  Answer {i+1} references additional content: False")
         
         return result.answers
         
@@ -650,7 +645,6 @@ async def get_oneshot_answer(context: str, questions: List[str]) -> List[str]:
                 additional_content += f"\n\n" + "="*50 + "\n"
                 additional_content += f"SOURCE: {metadata}\n"
                 additional_content += f"URL: {result['url']}\n"
-                additional_content += f"TITLE: {result.get('title', 'No title')}\n"
                 additional_content += "-"*30 + " CONTENT " + "-"*30 + "\n"
                 additional_content += f"{result['content']}\n"
                 additional_content += "="*50 + "\n"

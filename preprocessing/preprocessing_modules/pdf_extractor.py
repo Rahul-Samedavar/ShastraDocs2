@@ -27,6 +27,7 @@ class TextExtractor:
         self.max_workers = max_workers
         self.backend = backend
         self.logger = logging.getLogger(__name__)
+        self.cache = {}
         
     def extract_text_from_pdf(self, pdf_path: str, extract_tables: bool = True, 
                              handle_cid: bool = True) -> str:
@@ -44,6 +45,10 @@ class TextExtractor:
         Raises:
             Exception: If text extraction fails
         """
+        cached_data = self.cache.get(pdf_path)
+        if cached_data:
+            print("Using Cache: Skipped pdf extraction")
+            return cached_data
         pdf_path = Path(pdf_path)
         if not pdf_path.exists():
             raise FileNotFoundError(f"PDF file not found: {pdf_path}")
@@ -52,9 +57,11 @@ class TextExtractor:
         
         # Choose extraction method based on backend
         if self.backend == "pymupdf" or (self.backend == "auto" and handle_cid):
-            return self._extract_with_pymupdf(pdf_path, extract_tables, handle_cid)
+            text = self._extract_with_pymupdf(pdf_path, extract_tables, handle_cid)
         else:
-            return self._extract_with_pdfplumber(pdf_path, extract_tables)
+            text =  self._extract_with_pdfplumber(pdf_path, extract_tables)
+        self.cache[pdf_path] = text
+        return text
     
     def _fallback_text_extraction(self, page: pymupdf.Page) -> List[Dict]:
         """Fallback text extraction for problematic pages."""

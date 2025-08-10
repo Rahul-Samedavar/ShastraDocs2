@@ -47,6 +47,7 @@ class ModularDocumentPreprocessor:
         self.embedding_manager = EmbeddingManager()
         self.vector_storage = VectorStorage(self.base_db_path)
         self.metadata_manager = MetadataManager(self.base_db_path)
+        self.cached_chunks = {}
         
         print("✅ Modular Document Preprocessor initialized successfully")
     
@@ -127,7 +128,7 @@ class ModularDocumentPreprocessor:
                 
                 case 'url':
                     new_context = "URL for Context: " + temp_file_path
-                    return ['unsupported', 'The submitted URL does not include any document. I can only answer questions based on the context of a provided document.']
+                    return [new_context, 'oneshot']
                 
                 case 'txt':
                     with open (temp_file_path, 'r') as f:
@@ -159,8 +160,13 @@ class ModularDocumentPreprocessor:
                 raise Exception("No meaningful text extracted from PDF")
             
             # Step 3: Create chunks
-            chunks = self.text_chunker.chunk_text(full_text)
-            if len(chunks) < 16:
+            chunks = self.cached_chunks.get(document_url)
+            if not chunks:
+                chunks = self.text_chunker.chunk_text(full_text)
+                self.cached_chunks[document_url] = chunks
+            else:
+                print("Using Cache: Skipped chunking")
+            if len(chunks) < 5:
                     print(f"Only {len(chunks)} chunks formed, going for oneshot.")
                     return [full_text, 'oneshot']
             
