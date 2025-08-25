@@ -1,212 +1,182 @@
 """
-Vector Storage Module
+Vector Storage Module - Modified for Unified Collection using LanceDB
 
-Handles storing chunks and embeddings in Qdrant vector database.
+Handles storing chunks and embeddings in a single LanceDB table
+with document-based filtering for multi-document retrieval.
 """
 
+import lancedb
 import numpy as np
-from typing import List
+import pandas as pd
+from typing import List, Optional
 from pathlib import Path
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
+import shutil
+from logger.custom_logger import CustomLogger
 
+# module logger
+logger = CustomLogger().get_logger(__file__)
 
 class VectorStorage:
-    """Handles vector storage operations with Qdrant."""
+    """Handles vector storage operations with a unified LanceDB table."""
     
-    def __init__(self, base_db_path: Path):
+    def __init__(self, base_db_path: Path, collection_name: str = "unified_documents"):
         """
-        Initialize the vector storage.
+        Initialize the vector storage with a unified collection name.
         
         Args:
-            base_db_path: Base path for storing Qdrant databases
+            base_db_path: Base path for storing the LanceDB database.
+            collection_name: Name of the unified table.
         """
         self.base_db_path = base_db_path
+        self.collection_name = collection_name
+        # LanceDB stores data in a directory, so the .db extension is conventional but not required.
+        self.db_path = base_db_path / f"{collection_name}.lance"
+        self._db = None
     
-    async def store_in_qdrant(self, chunks: List[str], embeddings: np.ndarray, doc_id: str):
+    def _get_db(self) -> lancedb.LanceDBConnection:
+        """Get or create LanceDB connection."""
+        if self._db is None:
+            self._db = lancedb.connect(self.db_path)
+        return self._db
+    
+    async def store(self, chunks: List[str], embeddings: np.ndarray, doc_id: str):
         """
-        Store chunks and embeddings in Qdrant.
+        Store chunks and embeddings in the unified LanceDB table.
         
         Args:
-            chunks: List of text chunks
-            embeddings: Corresponding embeddings array
-            doc_id: Document identifier
+            chunks: List of text chunks.
+            embeddings: Corresponding embeddings array.
+            doc_id: Document identifier.
         """
         if len(chunks) != embeddings.shape[0]:
             raise ValueError(f"Chunk count ({len(chunks)}) doesn't match embedding count ({embeddings.shape[0]})")
         
-        collection_name = f"{doc_id}_collection"
-        db_path = self.base_db_path / f"{collection_name}.db"
-        client = QdrantClient(path=str(db_path))
-        
-        print(f"💾 Storing {len(chunks)} vectors in collection: {collection_name}")
+        db = self._get_db()
+
+        logger.info("Storing vectors for document", doc_id=doc_id, count=len(chunks))
         
         try:
-            # Create or recreate collection
-            await self._setup_collection(client, collection_name, embeddings.shape[1])
+            # Prepare data in a format LanceDB understands (list of dicts or DataFrame)
+            data = []
+            for i, chunk in enumerate(chunks):
+                data.append({
+                    "vector": embeddings[i].tolist(),
+                    "text": chunk,
+                    "chunk_id": i,  # Chunk ID within the document
+                    "doc_id": doc_id,  # Document identifier for filtering
+                    "char_count": len(chunk),
+                    "word_count": len(chunk.split())
+                })
             
-            # Prepare and upload points
-            await self._upload_points(client, collection_name, chunks, embeddings, doc_id)
+            if self.collection_name in db.table_names():
+                # Table exists, add data to it
+                tbl = db.open_table(self.collection_name)
+                tbl.add(data)
+                logger.info("Added new records to existing table", collection=self.collection_name, added=len(data))
+            else:
+                # Table does not exist, create it with the first batch of data
+                db.create_table(self.collection_name, data=data)
+                logger.info("Created new unified table", collection=self.collection_name)
             
-            print(f"✅ Successfully stored all vectors in Qdrant")
+            logger.info("Successfully stored all vectors for document", doc_id=doc_id)
+            print("🟢 Vectors stored successfully")
             
-        finally:
-            client.close()
-    
-    async def _setup_collection(self, client: QdrantClient, collection_name: str, embedding_dim: int):
-        """
-        Set up Qdrant collection, recreating if it exists.
-        
-        Args:
-            client: Qdrant client
-            collection_name: Name of the collection
-            embedding_dim: Dimension of embeddings
-        """
-        # Delete existing collection if it exists
-        try:
-            client.delete_collection(collection_name)
-            print(f"🗑️ Deleted existing collection: {collection_name}")
-        except Exception:
-            pass  # Collection might not exist
-        
-        # Create new collection
-        client.create_collection(
-            collection_name=collection_name,
-            vectors_config=VectorParams(
-                size=embedding_dim,
-                distance=Distance.COSINE
-            )
-        )
-        print(f"✅ Created new collection: {collection_name}")
-    
-    async def _upload_points(self, client: QdrantClient, collection_name: str, 
-                           chunks: List[str], embeddings: np.ndarray, doc_id: str):
-        """
-        Upload points to Qdrant collection in batches.
-        
-        Args:
-            client: Qdrant client
-            collection_name: Name of the collection
-            chunks: Text chunks
-            embeddings: Embedding vectors
-            doc_id: Document identifier
-        """
-        # Prepare points
-        points = []
-        for i in range(len(chunks)):
-            points.append(
-                PointStruct(
-                    id=i,
-                    vector=embeddings[i].tolist(),
-                    payload={
-                        "text": chunks[i],
-                        "chunk_id": i,
-                        "doc_id": doc_id,
-                        "char_count": len(chunks[i]),
-                        "word_count": len(chunks[i].split())
-                    }
-                )
-            )
-        
-        # Upload in batches to handle large documents
-        batch_size = 100
-        total_batches = (len(points) + batch_size - 1) // batch_size
-        
-        for i in range(0, len(points), batch_size):
-            batch = points[i:i + batch_size]
-            batch_num = (i // batch_size) + 1
-            
-            print(f"   Uploading batch {batch_num}/{total_batches} ({len(batch)} points)")
-            client.upsert(collection_name=collection_name, points=batch)
-        
-        print(f"✅ Uploaded {len(points)} points in {total_batches} batches")
-    
-    def collection_exists(self, doc_id: str) -> bool:
-        """
-        Check if a collection exists for the given document ID.
-        
-        Args:
-            doc_id: Document identifier
-            
-        Returns:
-            bool: True if collection exists, False otherwise
-        """
-        collection_name = f"{doc_id}_collection"
-        db_path = self.base_db_path / f"{collection_name}.db"
-        return db_path.exists()
-    
-    def get_collection_info(self, doc_id: str) -> dict:
-        """
-        Get information about a collection.
-        
-        Args:
-            doc_id: Document identifier
-            
-        Returns:
-            dict: Collection information
-        """
-        collection_name = f"{doc_id}_collection"
-        db_path = self.base_db_path / f"{collection_name}.db"
-        
-        if not db_path.exists():
-            return {
-                "collection_name": collection_name,
-                "exists": False,
-                "path": str(db_path)
-            }
-        
-        try:
-            client = QdrantClient(path=str(db_path))
-            try:
-                collection_info = client.get_collection(collection_name)
-                return {
-                    "collection_name": collection_name,
-                    "exists": True,
-                    "path": str(db_path),
-                    "vectors_count": collection_info.vectors_count,
-                    "status": collection_info.status
-                }
-            finally:
-                client.close()
         except Exception as e:
-            return {
-                "collection_name": collection_name,
-                "exists": True,
-                "path": str(db_path),
-                "error": str(e)
-            }
-    
-    def delete_collection(self, doc_id: str) -> bool:
-        """
-        Delete a collection and its database file.
-        
-        Args:
-            doc_id: Document identifier
+            logger.error("Error storing vectors for document", doc_id=doc_id, error=str(e))
+            raise
             
-        Returns:
-            bool: True if successfully deleted, False otherwise
-        """
-        collection_name = f"{doc_id}_collection"
-        db_path = self.base_db_path / f"{collection_name}.db"
+    def collection_exists(self, doc_id: Optional[str] = None) -> bool:
+        """Check if the LanceDB database directory exists."""
+        return self.db_path.exists() and len(self._get_db().table_names()) > 0
+
+    def get_collection_info(self, doc_id: Optional[str] = None) -> dict:
+        """Get information about the unified table or a specific document within it."""
+        if not self.collection_exists():
+            return {"collection_name": self.collection_name, "exists": False, "path": str(self.db_path)}
         
         try:
-            if db_path.exists():
-                # Try to delete collection properly first
-                try:
-                    client = QdrantClient(path=str(db_path))
-                    client.delete_collection(collection_name)
-                    client.close()
-                except Exception:
-                    pass  # Collection might not exist or be corrupted
+            db = self._get_db()
+            tbl = db.open_table(self.collection_name)
+            
+            base_info = {
+                "collection_name": self.collection_name,
+                "exists": True,
+                "path": str(self.db_path),
+                "total_vectors_count": len(tbl),
+            }
+            
+            if doc_id:
+                where_clause = f"doc_id = '{doc_id}'"
+                doc_df = tbl.to_pandas(where=where_clause)
+                doc_vectors_count = len(doc_df)
                 
-                # Remove database directory
-                import shutil
-                shutil.rmtree(db_path, ignore_errors=True)
-                print(f"🗑️ Deleted collection: {collection_name}")
+                base_info.update({
+                    "doc_id": doc_id,
+                    "doc_vectors_count": doc_vectors_count,
+                    "sample_chunks": [text[:100] + "..." for text in doc_df['text'].head(3).tolist()]
+                })
+            
+            return base_info
+            
+        except Exception as e:
+            return {"collection_name": self.collection_name, "exists": True, "path": str(self.db_path), "error": str(e)}
+
+    def delete_document(self, doc_id: str) -> bool:
+        """Delete all records for a specific document from the unified table."""
+        try:
+            if not self.collection_exists():
+                logger.info("Database doesn't exist, nothing to delete")
                 return True
             
+            db = self._get_db()
+            tbl = db.open_table(self.collection_name)
+            
+            where_clause = f"doc_id = '{doc_id}'"
+            tbl.delete(where_clause)
+            
+            logger.info("Deleted all vectors for document", doc_id=doc_id)
+            return True
+            
         except Exception as e:
-            print(f"❌ Error deleting collection {collection_name}: {e}")
+            logger.error("Error deleting document", doc_id=doc_id, error=str(e))
             return False
-        
-        return True  # Nothing to delete
+
+    def delete_collection(self, doc_id: Optional[str] = None) -> bool:
+        """Delete the entire unified collection (database directory)."""
+        try:
+            if self.db_path.exists():
+                shutil.rmtree(self.db_path)
+                logger.info("Deleted unified collection directory", path=str(self.db_path))
+                # Reset connection object
+                self._db = None
+                return True
+        except Exception as e:
+            logger.error("Error deleting collection", collection=self.collection_name, error=str(e))
+            return False
+        return True
+
+    def list_documents(self) -> List[str]:
+        """List all unique document IDs in the unified table."""
+        try:
+            if not self.collection_exists():
+                return []
+            
+            db = self._get_db()
+            tbl = db.open_table(self.collection_name)
+            
+            # Efficiently get unique doc_ids
+            df = tbl.to_pandas(columns=["doc_id"])
+            if df.empty:
+                return []
+            
+            unique_doc_ids = df["doc_id"].unique().tolist()
+            return sorted(unique_doc_ids)
+            
+        except Exception as e:
+            logger.error("Error listing documents", error=str(e))
+            return []
+
+    def close(self):
+        """LanceDB connection doesn't need explicit closing."""
+        self._db = None
+        pass

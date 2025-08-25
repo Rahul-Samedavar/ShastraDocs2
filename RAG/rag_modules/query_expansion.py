@@ -8,12 +8,17 @@ import time
 from typing import List
 from LLM.lite_llm import generate_lite
 from config.config import ENABLE_QUERY_EXPANSION, QUERY_EXPANSION_COUNT
+from logger.custom_logger import CustomLogger
+
+# module-level logger
+logger = CustomLogger().get_logger(__file__)
 
 class QueryExpansionManager:
     """Manages query expansion for better information retrieval."""
     
     def __init__(self):
-        print("✅ Query Expansion Manager initialized")
+        self.answer_count = 0
+        logger.info("Query Expansion Manager initialized", status="initialized")
     
     async def expand_query(self, original_query: str) -> List[str]:
         """Break complex queries into focused parts for better information retrieval."""
@@ -77,64 +82,19 @@ subquery2 (if exists)
             if len(expanded_queries) < 1:
                 expanded_queries = [original_query]
             
-            # Ensure we have exactly QUERY_EXPANSION_COUNT queries
+            # Ensure we have exactly {QUERY_EXPANSION_COUNT} no. of queries only
             expanded_queries.reverse()
             final_queries = expanded_queries[:QUERY_EXPANSION_COUNT]
             
-            print(f"🔄 Query broken down from 1 complex question to {len(final_queries)} focused sub-queries")
-            print(f"📌 Original query will be used for final LLM generation only")
+            logger.info("Query expanded", original_query=original_query, sub_queries=len(final_queries))
+            self.answer_count += 1
+            print(f"🟢 Query {self.answer_count} Expansion successful")
             for i, q in enumerate(final_queries):
-                print(f"   Sub-query {i+1}: {q[:80]}...")
+                logger.info("Expanded sub-query", index=i+1, query=q[:200])
             
             return final_queries
             
         except Exception as e:
-            print(f"⚠️ Query expansion failed: {e}")
+            logger.error("Query expansion failed", error=str(e))
+            print("🔴 Query Expansion Failed!!")
             return [original_query]
-    
-    def _identify_query_components(self, query: str) -> dict:
-        """Identify different components in a complex query for better breakdown."""
-        components = {
-            'processes': [],
-            'documents': [],
-            'contacts': [],
-            'eligibility': [],
-            'timelines': [],
-            'benefits': []
-        }
-        
-        # Define keywords for different component types
-        process_keywords = ['process', 'procedure', 'steps', 'how to', 'submit', 'apply', 'claim', 'update', 'change', 'enroll']
-        document_keywords = ['documents', 'forms', 'papers', 'certificate', 'proof', 'evidence', 'requirements']
-        contact_keywords = ['email', 'phone', 'contact', 'grievance', 'customer service', 'support', 'helpline']
-        eligibility_keywords = ['eligibility', 'criteria', 'qualify', 'eligible', 'conditions', 'requirements']
-        timeline_keywords = ['timeline', 'period', 'duration', 'time', 'days', 'months', 'waiting', 'grace']
-        benefit_keywords = ['benefits', 'coverage', 'limits', 'amount', 'reimbursement', 'claim amount']
-        
-        query_lower = query.lower()
-        
-        # Check for process-related content
-        if any(keyword in query_lower for keyword in process_keywords):
-            components['processes'].append('process identification')
-        
-        # Check for document-related content
-        if any(keyword in query_lower for keyword in document_keywords):
-            components['documents'].append('document requirements')
-        
-        # Check for contact-related content
-        if any(keyword in query_lower for keyword in contact_keywords):
-            components['contacts'].append('contact information')
-        
-        # Check for eligibility-related content
-        if any(keyword in query_lower for keyword in eligibility_keywords):
-            components['eligibility'].append('eligibility criteria')
-        
-        # Check for timeline-related content
-        if any(keyword in query_lower for keyword in timeline_keywords):
-            components['timelines'].append('timeline information')
-        
-        # Check for benefit-related content
-        if any(keyword in query_lower for keyword in benefit_keywords):
-            components['benefits'].append('benefit details')
-        
-        return components

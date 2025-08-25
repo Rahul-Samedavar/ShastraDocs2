@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 import google.generativeai as genai
 from PIL import Image
@@ -54,6 +55,7 @@ def get_answer_for_image(image_source: str, questions: List[str], retries: int =
             raw_text = response.text.strip()
             answers = extract_ordered_answers(raw_text, len(questions))
             if len(answers) == len(questions):
+                print("🟢 Image answerer is successful ")
                 return answers
         except Exception as e:
             if attempt == retries - 1:
@@ -63,7 +65,6 @@ def get_answer_for_image(image_source: str, questions: List[str], retries: int =
 
 def extract_ordered_answers(raw_text: str, expected_count: int) -> List[str]:
     """Parse the raw Gemini output into a clean list of answers."""
-    import re
     lines = raw_text.splitlines()
     answers = []
     for line in lines:
