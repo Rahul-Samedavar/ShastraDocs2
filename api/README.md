@@ -1,14 +1,16 @@
+
 # ShastraDocs API Package
 
-A production-ready FastAPI REST API for the ShastraDocs document analysis system. This package provides secure, authenticated endpoints for document processing, question answering, and system management with comprehensive logging and monitoring.
+A production-ready FastAPI REST API for the ShastraDocs document analysis system. This package provides secure, authenticated endpoints for document processing, question answering, and system management, along with a full set of endpoints to power its web-based user interface.
 
 ## 🚀 Overview
 
-The API package serves as the main interface for the ShastraDocs RAG system, offering:
-- **Document Processing**: Upload and analyze documents in 8+ formats
-- **Question Answering**: Intelligent responses using advanced RAG techniques
-- **System Management**: Admin endpoints for monitoring and maintenance
-- **Enhanced Logging**: Detailed request tracking and performance analytics
+The API package serves as the main interface for the ShastraDocs system, offering:
+- **User & Session Management**: Endpoints for user signup, login, and management of persistent document sessions.
+- **Multi-Document Processing**: Upload and analyze multiple documents (8+ formats) within a session.
+- **Interactive Question Answering**: A chat-style endpoint for querying across all documents in a session, with structured, referenced answers.
+- **System Management**: Admin endpoints for monitoring and maintenance.
+- **Enhanced Logging**: Detailed request tracking and performance analytics.
 
 ## 📦 Package Structure
 
@@ -21,43 +23,95 @@ api/
 ## 🎯 Core Features
 
 ### 🔐 Security & Authentication
-- **Bearer Token Authentication**: Secure API access with configurable tokens
-- **Admin Endpoints**: Separate authentication for administrative functions
-- **Request Validation**: Comprehensive input validation using Pydantic models
+- **User Authentication**: Email/password-based system for the UI.
+- **Bearer Token Authentication**: Secure core API access with configurable tokens.
+- **Admin Endpoints**: Separate authentication for administrative functions.
+- **Request Validation**: Comprehensive input validation using Pydantic models.
 
 ### ⚡ Intelligent Document Processing
-- **Optimized Flow**: Checks for pre-processed documents to avoid redundant work
-- **Multi-Format Support**: Handles PDFs, Word docs, presentations, spreadsheets, images
-- **Parallel Processing**: Concurrent question answering with configurable limits
-- **Fallback Handling**: Graceful degradation for unsupported formats
+- **Multi-Document Context**: Process and query across collections of documents in a single request.
+- **Optimized Flow**: Checks for pre-processed documents to avoid redundant work.
+- **Parallel Processing**: Concurrent question answering with configurable limits.
+- **Fallback Handling**: Graceful degradation for unsupported formats.
 
 ### 📊 Advanced Processing Modes
-- **Standard RAG**: Full pipeline for complex documents
-- **OneShot Processing**: Fast processing for simple text documents
-- **Tabular Analysis**: Specialized handling for structured data
-- **Image Analysis**: OCR and visual question answering
+- **Standard RAG**: Full pipeline for complex documents.
+- **OneShot Processing**: Fast processing for simple text documents.
+- **Tabular Analysis**: Specialized handling for structured data.
+- **Image Analysis**: OCR and visual question answering.
 
 ### 🔍 Monitoring & Observability
-- **Real-time Logging**: Detailed request tracking with unique IDs
-- **Performance Metrics**: Pipeline timing breakdown and statistics
-- **Health Monitoring**: System status and component health checks
-- **Export Capabilities**: JSON log export with filtering options
+- **Real-time Logging**: Detailed request tracking with unique IDs.
+- **Performance Metrics**: Pipeline timing breakdown and statistics.
+- **Health Monitoring**: System status and component health checks.
+- **Export Capabilities**: JSON log export with filtering options.
 
 ## 📋 API Endpoints
 
-### Core Processing Endpoints
+### User & Session Management
 
-#### `POST /hackrx/run` - Document Processing & QA
-Process documents and answer questions using the advanced RAG pipeline.
+- `POST /signup`: Create a new user account.
+- `POST /login`: Log in a user and retrieve their user ID.
+- `GET /my_sessions/{user_id}`: List all sessions for a specific user.
+- `POST /new_session`: Create a new, empty session for a user.
+- `DELETE /session/{session_id}`: Delete a session and its associated messages.
+- `POST /clone`: Create a copy of an existing session.
+
+### Document & Chat Endpoints
+
+#### `POST /upload` - Upload Documents to Session
+Upload one or more files, or provide a URL, to add documents to a specific session.
+- **Request**: `multipart/form-data` with `session_id` (str), `files` (List[UploadFile]), or `url` (str).
+- **Response**: `{ "message": "File(s) uploaded", "doc_ids": ["1", "2"] }`
+
+#### `POST /query` - Ask a Question in a Session
+Submit a question to get an answer synthesized from all documents within the specified session.
+**Request:**
+```json
+{
+  "session_id": "your_session_id",
+  "question": "What is the policy on remote work?"
+}
+```
+**Response (Structured with References):**
+```json
+{
+  "answer_parts": [
+    {
+      "text": "The policy states that remote work is available to all full-time employees. ",
+      "references": []
+    },
+    {
+      "text": "Approval from a direct manager is required before starting a remote work arrangement.",
+      "references": [
+        {
+          "doc_id": "3",
+          "page_num": 4,
+          "text_snippet": "All remote work arrangements must be approved by the employee's direct manager..."
+        }
+      ]
+    }
+  ],
+  "metadata": { "confidence_score": 0.92, "language": "en" }
+}
+```
+#### `GET /get_doc/{session_id}/{doc_id}` - Retrieve a Document
+Serves a document file for viewing (e.g., in Apryse WebViewer).
+
+### Core Processing Endpoint
+
+#### `POST /hackrx/run` - Multi-Document Processing & QA
+Process one or more documents and answer questions in a single, stateless request.
 
 **Request:**
 ```json
 {
-  "documents": "https://example.com/policy.pdf",
+  "documents": [
+    "https://example.com/policy_a.pdf",
+    "https://example.com/policy_b.docx"
+  ],
   "questions": [
-    "What is the claim submission process?",
-    "What documents are required?",
-    "Who should I contact for help?"
+    "Compare the claim submission process from both documents."
   ]
 }
 ```
@@ -66,71 +120,19 @@ Process documents and answer questions using the advanced RAG pipeline.
 ```json
 {
   "answers": [
-    "The claim submission process involves three main steps...",
-    "Required documents include: policy certificate, claim form...",
-    "For assistance, contact the customer service team at..."
+    "In policy A, the claim process involves filling out Form-X and submitting it online. In policy B, claims must be initiated via a phone call to the claims department..."
   ]
 }
 ```
 
-**Features:**
-- ✅ **Smart Caching**: Reuses pre-processed embeddings
-- ⚡ **Parallel Processing**: Handles multiple questions concurrently
-- 🔄 **Automatic Fallback**: Switches between processing modes based on document type
-- 📊 **Detailed Timing**: Returns comprehensive performance metrics
+### Administrative & Health Endpoints (Admin Token Required)
 
-#### `GET /health` - Health Check
-Simple health check endpoint for monitoring system status.
-
-**Response:**
-```json
-{
-  "status": "healthy",
-  "message": "RAG API is running successfully"
-}
-```
-
-### Administrative Endpoints (Admin Token Required)
-
-#### `POST /preprocess` - Batch Document Preprocessing
-Pre-process documents for faster future queries.
-
-**Parameters:**
-- `document_url`: URL of document to preprocess
-- `force`: Boolean to force reprocessing
-
-#### `GET /collections` - List Processed Documents
-Retrieve information about all processed document collections.
-
-#### `GET /collections/stats` - Collection Statistics
-Get comprehensive statistics about the document database.
-
-### Logging & Monitoring Endpoints (Admin Token Required)
-
-#### `GET /logs` - Export Request Logs
-Export detailed API request logs with optional filtering.
-
-**Query Parameters:**
-- `limit`: Maximum number of logs to return
-- `minutes`: Get logs from last N minutes
-- `document_url`: Filter by specific document URL
-
-**Response:**
-```json
-{
-  "export_timestamp": "2024-01-15T10:30:00Z",
-  "metadata": {
-    "total_requests": 156,
-    "successful_requests": 152,
-    "success_rate": 97.44,
-    "average_processing_time": 2.34
-  },
-  "logs": [...]
-}
-```
-
-#### `GET /logs/summary` - Logs Summary
-Get aggregated statistics and performance metrics.
+- `GET /health`: Simple health check endpoint.
+- `POST /preprocess`: Pre-process a document for faster future queries.
+- `GET /collections`: List information about all processed document collections.
+- `GET /collections/stats`: Get statistics about the document database.
+- `GET /logs`: Export detailed API request logs.
+- `GET /logs/summary`: Get aggregated performance metrics.
 
 ## 🔧 Configuration
 
@@ -139,32 +141,19 @@ Get aggregated statistics and performance metrics.
 ```bash
 # API Configuration
 API_HOST=0.0.0.0
-API_PORT=8000
+API_PORT=7860
 API_RELOAD=True
 
 # Authentication
 BEARER_TOKEN=your_secure_api_token
+ADMIN_TOKEN=your_secure_admin_token
 
 # LLM Provider Keys (auto-detects multiple keys)
 GROQ_API_KEY_1=your_groq_key_1
-GROQ_API_KEY_2=your_groq_key_2
 GEMINI_API_KEY_1=your_gemini_key_1
 
 # OCR Service
 OCR_SPACE_API_KEY=your_ocr_space_key
-```
-
-### Key Settings
-
-```python
-# Processing Configuration
-SEMAPHORE_COUNT = 5          # Concurrent question processing limit
-TIMEOUT_SECONDS = 600        # Request timeout for large documents
-MAX_RETRIES = 3             # Automatic retry attempts
-
-# Authentication
-ADMIN_TOKEN = "your_admin_token"   # Default admin token (change in production)
-BEARER_TOKEN = "your_token"  # Main API bearer token
 ```
 
 ## 🚀 Usage Examples
@@ -175,19 +164,22 @@ BEARER_TOKEN = "your_token"  # Main API bearer token
 import httpx
 import asyncio
 
-async def process_document():
-    url = "http://localhost:8000/hackrx/run"
+async def process_documents():
+    url = "http://localhost:7860/hackrx/run"
     headers = {"Authorization": "Bearer your_token"}
     
     data = {
-        "documents": "https://example.com/policy.pdf",
+        "documents": [
+            "https://example.com/policy.pdf",
+            "https://example.com/faq.docx"
+        ],
         "questions": [
-            "What is the main policy coverage?",
-            "How do I file a claim?"
+            "Summarize the policy coverage.",
+            "How do I file a claim according to the FAQ?"
         ]
     }
     
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=600) as client:
         response = await client.post(url, json=data, headers=headers)
         result = response.json()
         
@@ -195,109 +187,45 @@ async def process_document():
             print(f"Q{i+1}: {data['questions'][i]}")
             print(f"A{i+1}: {answer}\n")
 
-asyncio.run(process_document())
+asyncio.run(process_documents())
 ```
 
 ### cURL Examples
 
 ```bash
-# Process document with questions
-curl -X POST "http://localhost:8000/hackrx/run" \
+# Process multiple documents
+curl -X POST "http://localhost:7860/hackrx/run" \
   -H "Authorization: Bearer your_token" \
   -H "Content-Type: application/json" \
   -d '{
-    "documents": "https://example.com/document.pdf",
-    "questions": ["What is this document about?"]
+    "documents": ["https://example.com/doc1.pdf", "https://example.com/doc2.pdf"],
+    "questions": ["Compare the conclusions of both documents."]
   }'
 
-# Check system health
-curl -X GET "http://localhost:8000/health"
+# Ask a question within a UI session
+curl -X POST "http://localhost:7860/query" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "your_session_id_from_ui",
+    "question": "What is this document about?"
+  }'
 
-# Get recent logs (admin)
-curl -X GET "http://localhost:8000/logs?minutes=60" \
-  -H "Authorization: Bearer 9420689497"
-
-# Preprocess document (admin)
-curl -X POST "http://localhost:8000/preprocess" \
-  -H "Authorization: Bearer 9420689497" \
-  -d "document_url=https://example.com/policy.pdf&force=false"
+# Upload a file to a session
+curl -X POST "http://localhost:7860/upload" \
+  -F "session_id=your_session_id_from_ui" \
+  -F "files=@/path/to/your/document.pdf"
 ```
-
-## 🎯 Processing Modes
-
-### 1. Standard RAG Processing
-For complex documents requiring full pipeline processing:
-- Downloads and processes document
-- Creates embeddings and stores in vector database
-- Uses hybrid search with reranking
-- Returns detailed answers with citations
-
-### 2. OneShot Processing
-For simple text documents or when context is sufficient:
-- Processes small documents directly
-- Uses LLM without vector search
-- Faster response times
-- Suitable for short documents or summaries
-
-### 3. Tabular Data Processing
-For structured data like spreadsheets and CSV files:
-- Specialized tabular analysis
-- Handles data relationships and calculations
-- Optimized for numerical and categorical data
-- Batch processing for efficiency
-
-### 4. Image Processing
-For visual content analysis:
-- OCR text extraction
-- Table detection in images
-- Visual question answering
-- Automatic cleanup of processed images
-
-## 📊 Performance Monitoring
-
-### Request Lifecycle Tracking
-Each request is tracked with comprehensive metrics:
-
-```json
-{
-  "request_id": "req_000123",
-  "processing_time_seconds": 2.45,
-  "pipeline_timings": {
-    "query_expansion": 0.156,
-    "hybrid_search": 0.423,
-    "reranking": 0.089,
-    "context_creation": 0.012,
-    "llm_generation": 1.245
-  },
-  "question_timings": [
-    {
-      "question_index": 0,
-      "total_time_seconds": 1.234,
-      "pipeline_breakdown": {...}
-    }
-  ]
-}
-```
-
-### System Health Metrics
-- **Success Rate**: Percentage of successful requests
-- **Average Response Time**: Mean processing time across requests
-- **Provider Status**: Health of LLM providers
-- **Resource Usage**: Memory and processing statistics
 
 ## 🛠️ Development
 
 ### Running the API
 
 ```bash
-# Development mode with auto-reload
-python api/api.py
+# Development mode with auto-reload from the project root
+python app.py
 
 # Production mode with uvicorn
-uvicorn api.api:app --host 0.0.0.0 --port 8000
-
-# With specific workers (for production)
-uvicorn api.api:app --host 0.0.0.0 --port 8000 --workers 4
+uvicorn api.api:app --host 0.0.0.0 --port 7860 --workers 4
 ```
 
 ### Testing
@@ -314,129 +242,37 @@ def test_health_check():
     assert response.status_code == 200
     assert response.json()["status"] == "healthy"
 
-def test_process_document():
-    headers = {"Authorization": "Bearer your_test_token"}
+def test_process_document_unauthorized():
     data = {
-        "documents": "https://example.com/test.pdf",
+        "documents": ["https://example.com/test.pdf"],
         "questions": ["What is this about?"]
     }
-    
-    response = client.post("/hackrx/run", json=data, headers=headers)
-    assert response.status_code == 200
-    assert "answers" in response.json()
+    response = client.post("/hackrx/run", json=data)
+    assert response.status_code == 403 # Depends on if Depends is caught by test client
 ```
 
 ### Custom Error Handling
 
-The API includes comprehensive error handling:
-
-```python
-# Example error responses
-{
-  "status_code": 401,
-  "detail": "Invalid authentication token"
-}
-
-{
-  "status_code": 500,
-  "detail": "Failed to process document: Unsupported file format"
-}
-
-{
-  "status_code": 503,
-  "detail": "RAG system not initialized"
-}
+The API includes comprehensive error handling for both user and system issues.
+```json
+// Example error responses
+{ "detail": "Invalid authentication token" }
+{ "detail": "Failed to process document: Unsupported file format" }
+{ "error": "No documents in this session" }
 ```
 
 ## 🔒 Security Considerations
 
 ### Authentication
-- **Bearer Token**: All main endpoints require valid bearer token
-- **Admin Token**: Administrative functions use separate token
-- **Token Validation**: Server-side token verification
+- **User Passwords**: Stored directly in the database. For production, hashing should be implemented.
+- **Bearer Token**: Core endpoints require a valid bearer token.
+- **Admin Token**: Administrative functions use a separate token.
 
 ### Data Security
-- **No Persistent Storage**: Documents processed in memory only
-- **Automatic Cleanup**: Temporary files removed after processing
-- **Secure Headers**: CORS and security headers configured
-
-### Rate Limiting
-- **Request Throttling**: Built-in concurrency limits
-- **Provider Management**: Smart rate limit handling for LLM APIs
-- **Graceful Degradation**: Continues operation during provider issues
-
-## 🚀 Deployment
-
-### HuggingFace Spaces
-The API is optimized for HuggingFace Spaces deployment:
-
-```python
-# app.py - HuggingFace Spaces entry point
-from api.api import app
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=7860)
-```
-
-### Docker Deployment
-
-```dockerfile
-FROM python:3.9-slim
-
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-COPY . .
-EXPOSE 8000
-
-CMD ["uvicorn", "api.api:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-### Environment-Specific Configuration
-
-```bash
-# Development
-export API_RELOAD=true
-export API_HOST=127.0.0.1
-
-# Production
-export API_RELOAD=false
-export API_HOST=0.0.0.0
-export API_PORT=8000
-```
-
-## 📞 Troubleshooting
-
-### Common Issues
-
-1. **Authentication Errors**
-   - Verify bearer token configuration
-   - Check token format in Authorization header
-   - Ensure admin token for admin endpoints
-
-2. **Processing Failures**
-   - Check document URL accessibility
-   - Verify file format compatibility
-   - Review error logs for specific issues
-
-3. **Performance Issues**
-   - Monitor semaphore count for concurrency
-   - Check LLM provider status
-   - Review timeout configurations
-
-### Debug Mode
-
-```python
-import logging
-logging.basicConfig(level=logging.DEBUG)
-
-# Enable detailed logging for troubleshooting
-```
+- **Document Caching**: Uploaded documents are stored on the server's filesystem. Ensure appropriate permissions.
+- **Database**: Session and user data are stored in a SQLite database.
+- **Secure Headers**: CORS and security headers are configured.
 
 ---
 
-**ShastraDocs API Package** - Production-ready REST API for advanced document analysis and question answering.
-
-*Built with FastAPI, featuring comprehensive authentication, monitoring, and error handling for enterprise deployment.*
+**ShastraDocs API Package** - Production-ready REST API for advanced, multi-document analysis and interactive question answering.

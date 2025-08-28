@@ -34,14 +34,14 @@ ShastraDocs v2 is a production-ready, modular RAG system designed for comprehens
 ### ✨ Key Highlights
 
 - **🎯 Multi-Format Support**: PDF, DOCX, PPTX, XLSX, Images, Text, CSV, and URLs
-- **⚡ Intelligent Processing**: Automatic format detection with specialized handlers
-- **🔄 Multi-Provider LLM**: Smart rotation between Groq, Gemini, and OpenAI with rate limit handling
-- **🔍 Advanced Retrieval**: Hybrid search with BM25 + semantic search and cross-encoder reranking
-- **📊 Retrieval Across Multiple Files**: Common VectorStore with meta data filtering for Retrieving across multiple files
-- **🖥️ UI Integration**: Web interface for login, persisting sessions, uploads, and smart referencing with **Apryse Web SDK**
-- **📊 Production Features**: Comprehensive logging, monitoring, and health checks
-- **🐳 Docker Ready**: Containerized deployment with HuggingFace Spaces optimization
-- **💰 Cost Effective**: Process 200+ questions at $0 cost using free tier rotation
+- **⚡ Intelligent Processing**: Automatic format detection with specialized handlers.
+- **🔄 Multi-Provider LLM**: Smart rotation between Groq, Gemini, and OpenAI with rate limit handling.
+- **🔍 Advanced Retrieval**: Hybrid search with BM25 + semantic search and cross-encoder reranking.
+- **📂 Retrieval Across Multiple Files**: Query across a collection of documents in a persistent session, with responses synthesized from all relevant sources.
+- **🖥️ UI Integration**: A complete web interface for user login, persisting sessions, document uploads, and interactive chat with smart referencing and document previews powered by the **Apryse Web SDK**.
+- **📊 Production Features**: Comprehensive logging, monitoring, and health checks.
+- **🐳 Docker Ready**: Containerized deployment with HuggingFace Spaces optimization.
+- **💰 Cost Effective**: Process 200+ questions at $0 cost using free tier rotation.
 
 ## 🏗️ System Architecture
 
@@ -49,7 +49,7 @@ ShastraDocs v2 is a production-ready, modular RAG system designed for comprehens
 ┌─────────────────────────────────────────────────────────────────┐
 │                        ShastraDocs v2                           │
 ├─────────────────────────────────────────────────────────────────┤
-│     User Interface (Authentication, Sessions, File Preview)     │
+│    User Interface (Login, Sessions, Uploads, Chat, File Preview)│
 ├─────────────────────────────────────────────────────────────────┤
 │  FastAPI REST API (Authentication, Endpoints, Health Checks)    │
 ├─────────────────────────────────────────────────────────────────┤
@@ -71,53 +71,53 @@ ShastraDocs v2 is a production-ready, modular RAG system designed for comprehens
 shastradocs-v2/
 ├── 📁 api/                          # FastAPI REST API
 │   ├── __init__.py
-│   └── api.py                       # Main API endpoints and authentication
-├── 📁 templates/                   # UI
-│   ├── index.html
-│   └── service-worker.js 
-├── 📁 static/                         ]
-│   ├── lib/arpyse                   # extract apryse SDK here                    
+│   └── api.py                       # Main API endpoints, UI logic, and authentication
+├── 📁 templates/                   # HTML templates for the UI
+│   ├── index.html                   # Main single-page application
+│   └── service-worker.js            # PWA service worker
+├── 📁 static/                      # Static assets for the UI
+│   └── lib/apryse/                  # Apryse WebViewer SDK extraction location
 ├── 📁 config/                       # Centralized configuration
 │   ├── __init__.py
 │   └── config.py                    # Auto-detecting multi-provider configs
 ├── 📁 LLM/                         # Multi-provider LLM management
 │   ├── __init__.py
-│   ├── llm_handler.py              # Unified multi-provider handler
-│   ├── one_shotter.py              # Enhanced QA with web scraping
-│   ├── image_answerer.py           # Specialized image analysis
-│   ├── tabular_answer.py           # Structured data handler
-│   └── lite_llm.py                 # Lightweight handler
+│   ├── llm_handler.py               # Unified multi-provider handler
+│   ├── one_shotter.py               # Enhanced QA with web scraping
+│   ├── image_answerer.py            # Specialized image analysis
+│   ├── tabular_answer.py            # Structured data handler
+│   └── lite_llm.py                  # Lightweight handler
 ├── 📁 RAG/                         # Advanced retrieval system
 │   ├── __init__.py
-│   ├── advanced_rag_processor.py   # Main RAG orchestrator
-│   └── rag_modules/                # Modular RAG components
-│       ├── query_expansion.py      # Query decomposition
-│       ├── embedding_manager.py    # Semantic embeddings
-│       ├── search_manager.py       # Hybrid search engine
-│       ├── reranking_manager.py    # Cross-encoder reranking
-│       ├── context_manager.py      # Context assembly
-│       └── answer_generator.py     # LLM answer generation
-├── 📁 shared/                         # Advanced retrieval system
+│   ├── advanced_rag_processor.py    # Main RAG orchestrator
+│   └── rag_modules/                 # Modular RAG components
+│       ├── query_expansion.py       # Query decomposition
+│       ├── embedding_manager.py     # Semantic embeddings
+│       ├── search_manager.py        # Hybrid search engine
+│       ├── reranking_manager.py     # Cross-encoder reranking
+│       ├── context_manager.py       # Context assembly
+│       └── answer_generator.py      # LLM answer generation
+├── 📁 shared/                      # Shared utility modules
 │   ├── __init__.py
 │   └── model_manager.py             # Ensures one embedding model instance is created
 ├── 📁 preprocessing/               # Document processing pipeline
 │   ├── __init__.py
-│   ├── preprocessing.py            # Main entry point and CLI
-│   └── preprocessing_modules/      # Specialized extractors
-│       ├── modular_preprocessor.py # Main orchestrator
-│       ├── file_downloader.py      # Universal file downloading
-│       ├── pdf_extractor.py        # Advanced PDF processing
-│       ├── docx_extractor.py       # Word document handling
-│       ├── pptx_extractor.py       # PowerPoint processing
-│       ├── xlsx_extractor.py       # Excel with OCR support
-│       ├── image_extractor.py      # Image and table extraction
-│       ├── text_chunker.py         # Smart text chunking
-│       ├── embedding_manager.py    # Batch embedding generation
-│       ├── vector_storage.py       # Qdrant integration
-│       └── metadata_manager.py     # Document metadata
+│   ├── preprocessing.py             # Main entry point and CLI
+│   └── preprocessing_modules/       # Specialized extractors
+│       ├── modular_preprocessor.py  # Main orchestrator
+│       ├── file_downloader.py       # Universal file downloading
+│       ├── pdf_extractor.py         # Advanced PDF processing
+│       ├── docx_extractor.py        # Word document handling
+│       ├── pptx_extractor.py        # PowerPoint processing
+│       ├── xlsx_extractor.py        # Excel with OCR support
+│       ├── image_extractor.py       # Image and table extraction
+│       ├── text_chunker.py          # Smart text chunking
+│       ├── embedding_manager.py     # Batch embedding generation
+│       ├── vector_storage.py        # Qdrant integration
+│       └── metadata_manager.py      # Document metadata
 ├── 📁 logger/                      # Advanced logging system
 │   ├── __init__.py
-│   └── logger.py                   # In-memory logging with analytics
+│   └── logger.py                    # In-memory logging with analytics
 ├── 📄 app.py                       # Application entry point
 ├── 📄 startup.sh                   # Production startup script
 ├── 📄 Dockerfile                   # Container configuration
@@ -176,24 +176,30 @@ shastradocs-v2/
 - **Reranking**: Cross-encoder models for relevance refinement
 
 **Context-Aware Generation**
-- **Multi-perspective Context**: Equal representation from sub-queries
-- **Enhanced Prompting**: Specialized prompts for policy documents
-- **Error Handling**: Graceful handling of edge cases
+- **Multi-Document Context**: Synthesizes answers from multiple documents in a single query.
+- **Enhanced Prompting**: Specialized prompts for policy documents.
+- **Source Referencing**: Generates answers with citations pointing to the source document and page.
+- **Error Handling**: Graceful handling of edge cases.
 
 ### 🌐 Production-Ready API
 
 **REST Endpoints**
-- `POST /hackrx/run` - Document processing and Q&A
-- `GET /health` - System health monitoring  
+- `POST /signup`, `POST /login` - User authentication
+- `GET /my_sessions/{user_id}` - Manage user sessions
+- `POST /upload` - Upload documents to a session
+- `POST /query` - Ask questions within a session's context
+- `POST /hackrx/run` - Core multi-document processing and Q&A
+- `GET /health` - System health monitoring
 - `POST /preprocess` - Batch document preprocessing (admin)
 - `GET /logs` - Request logs export with filtering (admin)
 - `GET /collections` - List processed documents (admin)
 
 **Security Features**
-- Bearer token authentication for main endpoints
-- Admin token for administrative functions
-- Request validation using Pydantic models
-- CORS and security headers configuration
+- User email/password authentication for UI.
+- Bearer token authentication for core API endpoints.
+- Admin token for administrative functions.
+- Request validation using Pydantic models.
+- CORS and security headers configuration.
 
 ### 📊 Comprehensive Monitoring
 
@@ -226,94 +232,87 @@ shastradocs-v2/
 
 ### 🚀 Local Development Setup
 
-1. **Clone Repository**
-   ```bash
-   git clone <repository-url>
-   cd shastradocs-v2
-   ```
+1.  **Clone Repository**
+    ```bash
+    git clone https://github.com/Rahul-Samedavar/ShastraDocs2.git
+    cd ShastraDocs2
+    ```
 
-2. **Install Dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+2.  **Install Dependencies**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-3. **Configure Environment**
-   Create `.env` file with your API keys:
-   ```bash
-   # === LLM PROVIDERS ===
-   # Groq (Primary provider - fastest)
-   GROQ_API_KEY_1=your_first_groq_key
-   DEFAULT_GROQ_MODEL=qwen/qwen3-32b
-   
-   # Gemini (Secondary provider)
-   GEMINI_API_KEY_1=your_gemini_key
-   DEFAULT_GEMINI_MODEL=gemini-2.0-flash
-   
-   # OpenAI (Backup provider)
-   OPENAI_API_KEY_1=your_openai_key
-   DEFAULT_OPENAI_MODEL=gpt-4o-mini
+3.  **Configure Environment**
+    Create a `.env` file with your API keys:
+    ```bash
+    # === LLM PROVIDERS ===
+    # Groq (Primary provider - fastest)
+    GROQ_API_KEY_1=your_first_groq_key
+    DEFAULT_GROQ_MODEL=llama3-70b-8192
+    
+    # You can add more API keys for each provider by incrementing the number
+    # GEMINI_API_KEY_1=...
+    # OPENAI_API_KEY_1=...
 
-   #You can add more api keys just change the number
+    # === SERVICES ===
+    OCR_SPACE_API_KEY=your_ocr_space_key
+    BEARER_TOKEN=your_secure_api_token
+    ```
 
+4.  **Apryse SDK Setup**
+    - [Download](https://docs.apryse.com/downloads) the Apryse WebViewer SDK.
+    - Extract the contents into the `static/lib/apryse/` directory. Your structure should look like `static/lib/apryse/core/...`, `static/lib/apryse/ui/...` etc.
 
-   # === Specialized Pipelines ===
-   GROQ_API_KEY_TABULAR = "a groq api key" # Optional: If Groq key already exists in handler, but recomended 
-   GEMINI_API_KEY_IMAGE = "a gemini api" # Optional: If Gemini key already exists in handler, but recomended 
-
-   # === Query Expansion ===
-   GROQ_API_KEY_LITE = "a groq api key" # Optional: If Groq key already exists in handler, but recomended 
-   
-   # === SERVICES ===
-   OCR_SPACE_API_KEY=your_ocr_space_key
-   BEARER_TOKEN=your_secure_api_token
-
-4. **Apryse SDK Setup**
-  - [Download](https://docs.apryse.com/downloads) and extract Apryse WebViewer SDK in static/lib/apryse directory.
-
-5. **Run Application**
-   ```bash
-   python app.py
-   ```
+5.  **Run Application**
+    This will start the FastAPI server and serve the user interface.
+    ```bash
+    python app.py
+    ```
+    Access the UI at `http://127.0.0.1:7860`.
 
 ### 🐳 Docker Deployment
 
-1. **Build Image**
-   ```bash
-   docker build -t shastradocs-v2 .
-   ```
+1.  **Build Image**
+    ```bash
+    docker build -t shastradocs-v2 .
+    ```
 
-2. **Run Container**
-   ```bash
-   docker run -p 7860:7860 --env-file .env shastradocs-v2
-   ```
+2.  **Run Container**
+    ```bash
+    docker run -p 7860:7860 --env-file .env shastradocs-v2
+    ```
 
 ### ☁️ HuggingFace Spaces Deployment
 
 The application is optimized for HuggingFace Spaces:
 
-1. Upload project files to your Space
-2. Set environment variables in Space settings
-3. The `startup.sh` script handles database initialization
-4. Access via your Space URL
+1.  Upload project files to your Space.
+2.  Set environment variables in Space settings.
+3.  The `startup.sh` script handles database initialization.
+4.  Access via your Space URL.
 
 ## 📖 Usage Examples
 
-### Python Client
+### Python Client (Multi-Document)
 
 ```python
 import httpx
 import asyncio
 
-async def analyze_document():
-    url = "http://localhost:8000/hackrx/run"
-    headers = {"Authorization": "Bearer your_token"}
+async def analyze_documents():
+    # Use the port from your config, default is 7860
+    url = "http://localhost:7860/hackrx/run"
+    headers = {"Authorization": "Bearer your_secure_api_token"}
     
     data = {
-        "documents": "https://example.com/policy.pdf",
+        "documents": [
+            "https://example.com/policy_a.pdf",
+            "https://example.com/policy_b.docx"
+        ],
         "questions": [
-            "What is the claim submission process?",
-            "What documents are required?",
-            "Who should I contact for help?"
+            "Compare the claim submission process from both documents.",
+            "What is the contact for help in policy_a.pdf?"
         ]
     }
     
@@ -325,57 +324,56 @@ async def analyze_document():
         for i, answer in enumerate(result["answers"]):
             print(f"\nQ{i+1}: {data['questions'][i]}")
             print(f"A{i+1}: {answer}")
-        
-        # Performance metrics
-        if "pipeline_timings" in result:
-            timings = result["pipeline_timings"]
-            print(f"\n⏱️ Processing Time: {timings.get('total_pipeline', 0):.2f}s")
 
-asyncio.run(analyze_document())
+asyncio.run(analyze_documents())
 ```
 
 ### cURL Examples
 
 ```bash
-# Process document with questions
-curl -X POST "http://localhost:8000/hackrx/run" \
-  -H "Authorization: Bearer your_token" \
+# Process multiple documents with questions
+curl -X POST "http://localhost:7860/hackrx/run" \
+  -H "Authorization: Bearer your_secure_api_token" \
   -H "Content-Type: application/json" \
   -d '{
-    "documents": "https://example.com/policy.pdf",
+    "documents": [
+      "https://example.com/policy.pdf",
+      "https://example.com/faq.docx"
+    ],
     "questions": [
-      "What are the key policy highlights?",
-      "How do I submit a claim?"
+      "Summarize the key policy highlights from the PDF.",
+      "How do I submit a claim according to the FAQ?"
     ]
   }'
 
 # Check system health
-curl -X GET "http://localhost:8000/health"
+curl -X GET "http://localhost:7860/health"
 
 # Get request logs (admin)
-curl -X GET "http://localhost:8000/logs?minutes=60&limit=50" \
-  -H "Authorization: Bearer 9420689497"
+curl -X GET "http://localhost:7860/logs?minutes=60&limit=50" \
+  -H "Authorization: Bearer your_admin_token"
 
-# Preprocess document (admin)
-curl -X POST "http://localhost:8000/preprocess" \
-  -H "Authorization: Bearer 9420689497" \
-  -d "document_url=https://example.com/document.pdf&force=false"
+# Preprocess a document (admin)
+curl -X POST "http://localhost:7860/preprocess" \
+  -H "Authorization: Bearer your_admin_token" \
+  -F "document_url=https://example.com/document.pdf" \
+  -F "force=false"
 ```
 
 ### CLI Usage
 
 ```bash
 # Process single document
-python -m preprocessing --url "https://example.com/document.pdf"
+python -m preprocessing.preprocessing --url "https://example.com/document.pdf"
 
-# Process multiple documents
-python -m preprocessing --urls-file urls.txt
+# Process multiple documents from a file
+python -m preprocessing.preprocessing --urls-file urls.txt
 
 # List processed documents
-python -m preprocessing --list
+python -m preprocessing.preprocessing --list
 
 # Show statistics
-python -m preprocessing --stats
+python -m preprocessing.preprocessing --stats
 ```
 
 ## 🎛️ Configuration Guide
@@ -403,12 +401,11 @@ GROQ_API_KEY_2=backup_key
 GEMINI_API_KEY_2=backup_key
 
 # Custom models per provider
-DEFAULT_GROQ_MODEL=qwen/qwen3-32b
-GROQ_MODEL_1=llama3-70b-8192
+DEFAULT_GROQ_MODEL=llama3-70b-8192
 
 # API configuration
 API_HOST=0.0.0.0
-API_PORT=8000
+API_PORT=7860
 API_RELOAD=false
 
 # RAG configuration
@@ -479,10 +476,10 @@ llm_handler.reset_cooldowns()
 # Check document accessibility
 curl -I "https://your-document-url.pdf"
 
-# Force reprocessing
-curl -X POST "http://localhost:8000/preprocess" \
+# Force reprocessing (admin token required)
+curl -X POST "http://localhost:7860/preprocess" \
   -H "Authorization: Bearer admin_token" \
-  -d "document_url=your_url&force=true"
+  -F "document_url=your_url" -F "force=true"
 ```
 
 **3. OCR Space API Issues**
@@ -519,11 +516,11 @@ from api.api import app
 
 ```bash
 # System health check
-curl http://localhost:8000/health
+curl http://localhost:7860/health
 
-# Detailed logs export
+# Detailed logs export (admin token required)
 curl -H "Authorization: Bearer admin_token" \
-  "http://localhost:8000/logs?minutes=60" > debug_logs.json
+  "http://localhost:7860/logs?minutes=60" > debug_logs.json
 ```
 
 ## 🚀 Production Deployment
@@ -585,8 +582,8 @@ curl -f http://localhost:7860/health || exit 1
 # Prometheus metrics (custom implementation)
 curl http://localhost:7860/metrics
 
-# Log aggregation
-curl -H "Authorization: Bearer admin" \
+# Log aggregation (admin token required)
+curl -H "Authorization: Bearer admin_token" \
   "http://localhost:7860/logs" | jq '.metadata'
 ```
 
@@ -618,14 +615,16 @@ We welcome contributions! Please follow these guidelines:
 ## 🔒 Security Considerations
 
 ### Authentication
-- **Bearer Tokens**: Secure API access with rotation support
-- **Admin Endpoints**: Separate authentication for sensitive operations
-- **Input Validation**: Comprehensive request sanitization
+- **User Authentication**: Email and password-based system for the UI.
+- **Bearer Tokens**: Secure API access with rotation support for core endpoints.
+- **Admin Endpoints**: Separate authentication for sensitive operations.
+- **Input Validation**: Comprehensive request sanitization.
 
 ### Data Security
-- **No Persistent Storage**: Documents processed in memory only
-- **Automatic Cleanup**: Temporary files removed after processing
-- **Secure Headers**: CORS and security headers configured
+- **Database Storage**: User and session metadata are stored in a SQLite database.
+- **Document Caching**: Documents are stored on the server filesystem for processing.
+- **Automatic Cleanup**: Temporary files removed after processing.
+- **Secure Headers**: CORS and security headers configured.
 
 ### Rate Limiting
 - **Request Throttling**: Built-in concurrency limits
